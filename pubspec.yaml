@@ -4,8 +4,8 @@ description: >-
   sheet: single date or range, your theme colors, a live BS/AD switch and
   Nepali/English labels. Pure Dart, no platform channels, no dependencies.
 version: 1.0.0
-# repository: https://github.com/<you>/custom_nepali_calendar
-# issue_tracker: https://github.com/<you>/custom_nepali_calendar/issues
+repository: https://github.com/sarojkhanal51/custom_nepali_calendar
+issue_tracker: https://github.com/sarojkhanal51/custom_nepali_calendar/issues
 
 environment:
   sdk: ^3.10.0

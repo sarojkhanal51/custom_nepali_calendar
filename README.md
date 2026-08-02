@@ -7,6 +7,8 @@ and gets the picked value back.
 Written from scratch — **no third-party dependencies**, no platform channels, no
 native code. Pure Dart and the Flutter SDK, so it runs anywhere Flutter runs.
 
+<img src="doc/screenshots/range_sheet.png" width="300" alt="Range picker open in a bottom sheet, in Nepali">
+
 ## Install
 
 ```yaml
