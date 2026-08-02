@@ -1,0 +1,31 @@
+# Analyzer configuration for the custom_nepali_calendar package.
+#
+# The package is meant to be published, so the rules are stricter than the
+# default Flutter app template: every public member must be documented, and
+# anything that would surface as a warning for a consumer is an error here.
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+  errors:
+    public_member_api_docs: error
+    unused_import: error
+    unused_element: error
+    dead_code: error
+
+linter:
+  rules:
+    - always_declare_return_types
+    - avoid_print
+    - avoid_unused_constructor_parameters
+    - directives_ordering
+    - prefer_final_locals
+    - prefer_single_quotes
+    - public_member_api_docs
+    - require_trailing_commas
+    - sort_pub_dependencies
+    - unawaited_futures
+    - use_super_parameters

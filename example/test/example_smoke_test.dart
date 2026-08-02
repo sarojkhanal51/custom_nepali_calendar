@@ -1,0 +1,65 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:custom_nepali_calendar_example/main.dart';
+
+void main() {
+  testWidgets('picking a date shows both calendars in the result', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const ExampleApp());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nothing picked yet'), findsOneWidget);
+
+    await tester.tap(find.text('Pick a date'));
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsOneWidget);
+
+    // Nothing is preselected, so confirm is disabled until a day is picked.
+    expect(
+      tester
+          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Done'))
+          .onPressed,
+      isNull,
+    );
+    await tester.tap(find.text('Today'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BottomSheet), findsNothing);
+    expect(find.textContaining('Single'), findsOneWidget);
+    expect(find.textContaining('BS:'), findsOneWidget);
+    expect(find.textContaining('AD:'), findsOneWidget);
+  });
+
+  testWidgets('cancelling the range sheet is reported', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const ExampleApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Pick a range'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Range: cancelled'), findsOneWidget);
+  });
+
+  testWidgets('the language toggle switches the sheet to Nepali', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const ExampleApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('नेपाली'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Pick a date'));
+    await tester.pumpAndSettle();
+    expect(find.text('ठीक छ'), findsOneWidget);
+    expect(find.text('रद्द'), findsOneWidget);
+  });
+}

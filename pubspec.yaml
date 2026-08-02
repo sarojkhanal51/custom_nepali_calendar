@@ -1,0 +1,27 @@
+name: custom_nepali_calendar
+description: >-
+  A dependency-free Nepali (Bikram Sambat) date picker that opens in a bottom
+  sheet: single date or range, your theme colors, a live BS/AD switch and
+  Nepali/English labels. Pure Dart, no platform channels, no dependencies.
+version: 1.0.0
+# repository: https://github.com/<you>/custom_nepali_calendar
+# issue_tracker: https://github.com/<you>/custom_nepali_calendar/issues
+
+environment:
+  sdk: ^3.10.0
+  flutter: ">=3.16.0"
+
+# No third-party dependencies by design: only the Dart core libraries and the
+# Flutter SDK are used, so the package adds zero transitive weight and works on
+# every platform Flutter supports without extra setup.
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true

@@ -1,0 +1,23 @@
+name: custom_nepali_calendar_example
+description: Demo app for the custom_nepali_calendar package.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.0
+
+dependencies:
+  cupertino_icons: ^1.0.8
+  flutter:
+    sdk: flutter
+  # The library under demonstration, resolved from the parent directory.
+  custom_nepali_calendar:
+    path: ../
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
