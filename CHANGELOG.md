@@ -1,3 +1,9 @@
+## 2.0.1
+
+* **Docs:** `HorizontalDateStrip` shipped in 2.0.0 without any documentation —
+  it is now covered in the README with usage and a parameter table, and the
+  example app demonstrates it alongside the bottom sheet.
+
 ## 2.0.0
 
 ### Breaking

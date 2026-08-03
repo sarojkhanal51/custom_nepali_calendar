@@ -23,6 +23,7 @@ Everything below is in the code — nothing aspirational.
 - ✅ "Today" shortcut in the header
 - ✅ Month swipe and previous/next arrows
 - ✅ Selectable window via `startDate` with `endDate` or `durationDays`
+- ✅ `HorizontalDateStrip`: an inline row of days with the calendar one tap away
 - ✅ Custom Cancel/Done labels and an optional title
 
 **Nepali calendar**
@@ -117,6 +118,43 @@ if (selection != null) {
   print(selection.dateTimeRange);           // Gregorian DateTimeRange
 }
 ```
+
+### An inline strip of days
+
+For a row that lives on the screen rather than a sheet — today and the next few
+days, with the full calendar one tap away:
+
+```dart
+HorizontalDateStrip(
+  theme: NepaliCalendarTheme.fromTheme(Theme.of(context)),
+  startDate: NepaliDate.now(),
+  durationDays: 60,                 // optional window, same as the sheet
+  selectedDate: _date,
+  onDateSelected: (NepaliDate date) => setState(() => _date = date),
+)
+```
+
+Each chip shows **Today** or its month above the date and the weekday below. The
+trailing button opens `showNepaliCalendar` carrying the same theme, language and
+window; pick a day outside the strip and it re-anchors so the selection stays
+visible.
+
+It selects a day on first build — today when the strip covers it, otherwise
+`startDate` — and reports it through `onDateSelected`, so what is on screen and
+what you hold never disagree.
+
+| Parameter | Default | |
+|---|---|---|
+| `theme` | **required** | same `NepaliCalendarTheme` the sheet takes |
+| `onDateSelected` | **required** | fires on tap, on a calendar pick, and once on first build |
+| `startDate` | **required** | first day on the strip, earliest day offered |
+| `selectedDate` | `null` | which day is filled |
+| `dayCount` | `5` | how many days |
+| `endDate` / `durationDays` | `null` | where the window closes — at most one |
+| `language` | `.english` | |
+| `system` | `.bs` | the chips show that calendar only |
+| `showCalendarButton` | `true` | the trailing button |
+| `height` | `60` | chips scale to fit |
 
 `showNepaliCalendar` resolves to **`null`** when the user dismisses the sheet
 (Cancel, swipe down, back gesture, tap outside), so a null check is the only error

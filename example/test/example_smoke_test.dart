@@ -9,7 +9,9 @@ void main() {
     await tester.pumpWidget(const ExampleApp());
     await tester.pumpAndSettle();
 
-    expect(find.text('Nothing picked yet'), findsOneWidget);
+    // The strip reports its own default on first build, so the result card is
+    // already populated before anything is tapped.
+    expect(find.textContaining('Strip'), findsOneWidget);
 
     await tester.tap(find.text('Pick a date'));
     await tester.pumpAndSettle();
@@ -22,7 +24,13 @@ void main() {
           .onPressed,
       isNull,
     );
-    await tester.tap(find.text('Today'));
+    // "Today" appears on the strip's chip too, so aim at the sheet's button.
+    await tester.tap(
+      find.descendant(
+        of: find.byType(BottomSheet),
+        matching: find.text('Today'),
+      ),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Done'));

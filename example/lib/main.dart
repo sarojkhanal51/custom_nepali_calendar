@@ -1,8 +1,8 @@
 // Demo of the custom_nepali_calendar package.
 //
-// The package has one entry point: showNepaliCalendar. This screen calls it
-// twice — once for a single date, once for a range — with a caller-supplied
-// theme, and shows what comes back.
+// Two ways in: showNepaliCalendar opens the picker in a bottom sheet, and
+// HorizontalDateStrip puts a row of days straight on the screen. Both take the
+// same theme and the same startDate / durationDays window.
 
 import 'package:flutter/material.dart';
 import 'package:custom_nepali_calendar/custom_nepali_calendar.dart';
@@ -47,6 +47,7 @@ class _DemoScreenState extends State<DemoScreen> {
 
   String _result = 'Nothing picked yet';
   Language _language = Language.english;
+  NepaliDate? _stripDate;
 
   Future<void> _pickDate() async {
     final NepaliCalendarSelection? selection = await showNepaliCalendar(
@@ -126,6 +127,29 @@ class _DemoScreenState extends State<DemoScreen> {
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
+                ),
+                const SizedBox(height: 24),
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Or pick inline',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                HorizontalDateStrip(
+                  theme: _theme,
+                  language: _language,
+                  startDate: NepaliDate.now(),
+                  durationDays: 60,
+                  selectedDate: _stripDate,
+                  onDateSelected: (NepaliDate date) => setState(() {
+                    _stripDate = date;
+                    _result =
+                        'Strip\n'
+                        'BS: ${date.format('EEEE, d MMMM yyyy')}\n'
+                        'AD: ${date.toDateTime().toIso8601String().split('T').first}';
+                  }),
                 ),
                 const SizedBox(height: 24),
                 SegmentedButton<Language>(
