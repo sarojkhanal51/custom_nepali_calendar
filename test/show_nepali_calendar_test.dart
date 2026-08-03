@@ -966,6 +966,11 @@ void main() {
         cancelLabel: 'Back',
       );
       expect(find.text('Delivery date'), findsOneWidget);
+      // A heading, so it sits above the calendar rather than under the grid.
+      expect(
+        tester.getTopLeft(find.text('Delivery date')).dy,
+        lessThan(tester.getTopLeft(find.byType(CalendarHeader)).dy),
+      );
       expect(find.text('Apply'), findsOneWidget);
       expect(find.text('Back'), findsOneWidget);
       expect(find.text('Done'), findsNothing);

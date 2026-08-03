@@ -143,8 +143,9 @@ class NepaliCalendarSelection {
 ///   calendar the sheet opens in. The user can switch Bikram Sambat/Gregorian
 ///   from the header unless [showSystemSwitch] is false; the language is fixed by
 ///   the caller and is not switchable in the sheet.
-/// * [title] adds an optional caption above the buttons — nothing is shown there
-///   otherwise. [confirmLabel] and [cancelLabel] override the button text.
+/// * [title] is an optional heading shown at the top, above the calendar;
+///   nothing is drawn there when it is null. [confirmLabel] and [cancelLabel]
+///   override the button text.
 /// * [isDismissible] defaults to `false`, so a stray tap on the barrier cannot
 ///   throw away a half-finished range. Set it to `true` for a sheet the user can
 ///   flick away.
@@ -308,6 +309,23 @@ class _CalendarSheetState extends State<_CalendarSheet> {
             )
           else
             const SizedBox(height: 8),
+          // A title heads the sheet; it used to sit between the grid and the
+          // buttons, where it read as a stray caption.
+          if (widget.title != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 2, 16, 12),
+              child: Text(
+                widget.title!,
+                textAlign: TextAlign.center,
+                style: theme.applyFont(
+                  TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: theme.textColor,
+                  ),
+                ),
+              ),
+            ),
           CalendarView(
             controller: _controller,
             theme: theme,
@@ -324,20 +342,6 @@ class _CalendarSheetState extends State<_CalendarSheet> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
-                    if (widget.title != null) ...<Widget>[
-                      Text(
-                        widget.title!,
-                        textAlign: TextAlign.center,
-                        style: theme.applyFont(
-                          TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: theme.textColor,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                    ],
                     Row(
                       children: <Widget>[
                         Expanded(

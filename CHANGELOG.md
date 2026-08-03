@@ -1,3 +1,12 @@
+## 2.1.1
+
+### Fixed
+
+* `title` is drawn as a heading at the top of the sheet/dialog, above the
+  calendar. It used to sit between the grid and the buttons, where it read as a
+  stray caption rather than a title. No API change — `title` was, and stays,
+  optional.
+
 ## 2.1.0
 
 ### Added
