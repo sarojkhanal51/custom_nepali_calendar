@@ -160,12 +160,8 @@ class _CalendarViewState extends State<CalendarView> {
       start = _MonthRef(first.year, first.month);
       end = _MonthRef(last.year, last.month);
     } else {
-      final NepaliDate first = DateConverter.adPartsToBs(
-        ref.year,
-        ref.month,
-        1,
-      );
-      final NepaliDate last = DateConverter.adToBs(
+      final NepaliDate first = _bsWithinRange(DateTime(ref.year, ref.month, 1));
+      final NepaliDate last = _bsWithinRange(
         DateTime(ref.year, ref.month + 1, 0),
       );
       start = _MonthRef(first.year, first.month);
@@ -267,6 +263,22 @@ class _CalendarViewState extends State<CalendarView> {
   }
 }
 
+/// Converts [ad] to Bikram Sambat, clamped into the supported range.
+///
+/// A Gregorian month at either edge of the range reaches past what the BS table
+/// covers — April 1913 opens twelve days before 1 Baishakh 1970 — so the month's
+/// own first day is not always convertible. Clamping keeps the header and the
+/// pager working there instead of throwing mid-build.
+NepaliDate _bsWithinRange(DateTime ad) {
+  if (ad.isBefore(DateConverter.minAdDate)) {
+    return NepaliDate.min;
+  }
+  if (ad.isAfter(DateConverter.maxAdDate)) {
+    return NepaliDate.max;
+  }
+  return DateConverter.adToBs(ad);
+}
+
 /// A year/month pair in whichever calendar system is active.
 @immutable
 class _MonthRef {
@@ -340,7 +352,7 @@ class _MonthPager {
     final _MonthRef ref = monthRefOf(page);
     return system == CalendarSystem.bs
         ? NepaliDate(ref.year, ref.month, 1)
-        : DateConverter.adPartsToBs(ref.year, ref.month, 1);
+        : _bsWithinRange(DateTime(ref.year, ref.month, 1));
   }
 
   int _monthIndexOf(NepaliDate date) {

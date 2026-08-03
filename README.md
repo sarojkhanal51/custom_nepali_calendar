@@ -15,7 +15,7 @@ Everything below is in the code — nothing aspirational.
 
 **Picking**
 
-- ✅ Opens in a modal bottom sheet — one function call, no widget to place
+- ✅ Opens in a modal bottom sheet, or a centred dialog — one function call
 - ✅ Single date **or** date range selection
 - ✅ Range band drawn across the days between the two ends
 - ✅ Confirm stays disabled until the selection is complete
@@ -119,6 +119,22 @@ if (selection != null) {
 }
 ```
 
+### Where it appears
+
+The same calendar, framed two ways — a sheet from the bottom edge, or a dialog in
+the middle of the screen:
+
+```dart
+// the default
+presentation: NepaliCalendarPresentation.bottomSheet,
+
+// centred
+presentation: NepaliCalendarPresentation.center,
+```
+
+Both return the same value, honour `isDismissible`, and work in single and range
+mode. The centred one drops the drag handle, since there is no drag to hint at.
+
 ### An inline strip of days
 
 For a row that lives on the screen rather than a sheet — today and the next few
@@ -221,6 +237,7 @@ await showNepaliCalendar(
   context: context,
 
   mode: NepaliCalendarMode.single,          // or .range
+  presentation: NepaliCalendarPresentation.bottomSheet, // or .center
   theme: const NepaliCalendarTheme(...),    // REQUIRED — your colours, see below
 
   startDate: NepaliDate.now(),              // REQUIRED — where the calendar opens

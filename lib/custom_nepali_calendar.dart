@@ -35,6 +35,10 @@ export 'src/localization/calendar_strings.dart'
 export 'src/models/nepali_date.dart';
 export 'src/models/nepali_date_range.dart';
 export 'src/sheet/nepali_calendar_sheet.dart'
-    show NepaliCalendarMode, NepaliCalendarSelection, showNepaliCalendar;
+    show
+        NepaliCalendarMode,
+        NepaliCalendarPresentation,
+        NepaliCalendarSelection,
+        showNepaliCalendar;
 export 'src/strip/horizontal_date_strip.dart' show HorizontalDateStrip;
 export 'src/theme/nepali_calendar_theme.dart';

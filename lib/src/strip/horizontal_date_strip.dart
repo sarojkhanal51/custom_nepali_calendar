@@ -42,6 +42,7 @@ class HorizontalDateStrip extends StatefulWidget {
     this.language = Language.english,
     this.system = CalendarSystem.bs,
     this.showCalendarButton = true,
+    this.presentation = NepaliCalendarPresentation.bottomSheet,
     this.height = 60,
     super.key,
   }) : assert(dayCount > 0, 'dayCount must be at least 1'),
@@ -89,6 +90,9 @@ class HorizontalDateStrip extends StatefulWidget {
 
   /// Whether to show the trailing button that opens the full calendar.
   final bool showCalendarButton;
+
+  /// Where that calendar appears — a bottom sheet, or centred on the screen.
+  final NepaliCalendarPresentation presentation;
 
   /// Height of the strip, in logical pixels.
   ///
@@ -172,6 +176,7 @@ class _HorizontalDateStripState extends State<HorizontalDateStrip> {
     final NepaliCalendarSelection? selection = await showNepaliCalendar(
       context: context,
       theme: widget.theme,
+      presentation: widget.presentation,
       language: widget.language,
       initialSystem: widget.system,
       startDate: widget.startDate,

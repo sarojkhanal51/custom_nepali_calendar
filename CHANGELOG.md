@@ -1,3 +1,25 @@
+## 2.1.0
+
+### Added
+
+* `presentation` chooses where the calendar appears:
+  `NepaliCalendarPresentation.bottomSheet` (the default, unchanged) or
+  `NepaliCalendarPresentation.center` for a dialog in the middle of the screen.
+  Both return the same value and honour `isDismissible`.
+  `HorizontalDateStrip` takes it too, for the calendar behind its button.
+
+### Fixed
+
+* Switching to AD froze the calendar when the window reached the start of the
+  supported range. The header converts the visible Gregorian month's first day to
+  Bikram Sambat, and April 1913 opens twelve days before 1 Baishakh 1970, so that
+  conversion threw mid-build. Conversions at both edges now clamp into the
+  supported range.
+* The confirm button was invisible while disabled whenever the calendar's palette
+  and the host app's brightness disagreed — a dark calendar in a light app took
+  Material's ambient disabled colours and vanished against its own background.
+  Those colours now come from the calendar's own `textColor`.
+
 ## 2.0.1
 
 * **Docs:** `HorizontalDateStrip` shipped in 2.0.0 without any documentation —

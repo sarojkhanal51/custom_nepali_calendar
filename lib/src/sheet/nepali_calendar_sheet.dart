@@ -23,6 +23,18 @@ enum NepaliCalendarMode {
   bool get isRange => this == NepaliCalendarMode.range;
 }
 
+/// Where the calendar appears on screen.
+enum NepaliCalendarPresentation {
+  /// A modal sheet that slides up from the bottom edge. The default.
+  bottomSheet,
+
+  /// A dialog centred on the screen.
+  center;
+
+  /// Whether this is [NepaliCalendarPresentation.center].
+  bool get isCentered => this == NepaliCalendarPresentation.center;
+}
+
 /// What the user picked, returned by [showNepaliCalendar].
 ///
 /// Exactly one of [date] and [range] is set, matching the [NepaliCalendarMode]
@@ -104,6 +116,11 @@ class NepaliCalendarSelection {
 /// end; the days between are banded, and the confirm button stays disabled until
 /// both ends exist.
 ///
+/// * [presentation] decides where it appears:
+///   [NepaliCalendarPresentation.bottomSheet] slides up from the bottom edge —
+///   the default — and [NepaliCalendarPresentation.center] shows the same
+///   calendar in a dialog centred on the screen. Both return the same value and
+///   honour [isDismissible].
 /// * [theme] carries every colour the sheet paints with, and is required. Each of
 ///   its fields has a usable default, so `const NepaliCalendarTheme()` is a valid
 ///   thing to pass. For a sheet that follows the host app — including its light
@@ -135,6 +152,8 @@ Future<NepaliCalendarSelection?> showNepaliCalendar({
   required BuildContext context,
   required NepaliCalendarTheme theme,
   NepaliCalendarMode mode = NepaliCalendarMode.single,
+  NepaliCalendarPresentation presentation =
+      NepaliCalendarPresentation.bottomSheet,
   Language language = Language.english,
   CalendarSystem initialSystem = CalendarSystem.bs,
   required NepaliDate startDate,
@@ -159,6 +178,45 @@ Future<NepaliCalendarSelection?> showNepaliCalendar({
     durationDays == null || durationDays > 0,
     'durationDays must be greater than zero.',
   );
+  final Widget body = _CalendarSheet(
+    mode: mode,
+    theme: theme,
+    language: language,
+    initialSystem: initialSystem,
+    allowedRange: resolveCalendarWindow(
+      startDate: startDate,
+      endDate: endDate,
+      durationDays: durationDays,
+    ),
+    showSystemSwitch: showSystemSwitch,
+    showDragHandle: !presentation.isCentered,
+    title: title,
+    confirmLabel: confirmLabel,
+    cancelLabel: cancelLabel,
+  );
+  final ShapeBorder shape = RoundedRectangleBorder(
+    borderRadius: presentation.isCentered
+        ? BorderRadius.circular(theme.borderRadius + 8)
+        : BorderRadius.vertical(top: Radius.circular(theme.borderRadius + 8)),
+  );
+
+  if (presentation.isCentered) {
+    return showDialog<NepaliCalendarSelection>(
+      context: context,
+      barrierDismissible: isDismissible,
+      builder: (BuildContext context) => Dialog(
+        backgroundColor: theme.backgroundColor,
+        insetPadding: const EdgeInsets.all(20),
+        shape: shape,
+        clipBehavior: Clip.antiAlias,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: maxWidth),
+          child: body,
+        ),
+      ),
+    );
+  }
+
   return showModalBottomSheet<NepaliCalendarSelection>(
     context: context,
     isDismissible: isDismissible,
@@ -167,26 +225,8 @@ Future<NepaliCalendarSelection?> showNepaliCalendar({
     useSafeArea: true,
     backgroundColor: theme.backgroundColor,
     constraints: BoxConstraints(maxWidth: maxWidth),
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(theme.borderRadius + 8),
-      ),
-    ),
-    builder: (BuildContext context) => _CalendarSheet(
-      mode: mode,
-      theme: theme,
-      language: language,
-      initialSystem: initialSystem,
-      allowedRange: resolveCalendarWindow(
-        startDate: startDate,
-        endDate: endDate,
-        durationDays: durationDays,
-      ),
-      showSystemSwitch: showSystemSwitch,
-      title: title,
-      confirmLabel: confirmLabel,
-      cancelLabel: cancelLabel,
-    ),
+    shape: shape,
+    builder: (BuildContext context) => body,
   );
 }
 
@@ -198,6 +238,7 @@ class _CalendarSheet extends StatefulWidget {
     required this.initialSystem,
     required this.allowedRange,
     required this.showSystemSwitch,
+    required this.showDragHandle,
     required this.title,
     required this.confirmLabel,
     required this.cancelLabel,
@@ -209,6 +250,7 @@ class _CalendarSheet extends StatefulWidget {
   final CalendarSystem initialSystem;
   final NepaliDateRange? allowedRange;
   final bool showSystemSwitch;
+  final bool showDragHandle;
   final String? title;
   final String? confirmLabel;
   final String? cancelLabel;
@@ -250,17 +292,22 @@ class _CalendarSheetState extends State<_CalendarSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            child: Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: theme.subtitleTextColor.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(2),
+          // The grab handle belongs to a sheet you can drag; a centred dialog
+          // has no such gesture, so it would only take up room.
+          if (widget.showDragHandle)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: theme.subtitleTextColor.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-            ),
-          ),
+            )
+          else
+            const SizedBox(height: 8),
           CalendarView(
             controller: _controller,
             theme: theme,
@@ -317,6 +364,14 @@ class _CalendarSheetState extends State<_CalendarSheet> {
                             style: FilledButton.styleFrom(
                               backgroundColor: theme.primaryColor,
                               foregroundColor: theme.headerTextColor,
+                              // Derived from the calendar's own palette, not the
+                              // ambient one: a dark calendar inside a light app
+                              // would otherwise take Material's light disabled
+                              // colours and vanish against its own background.
+                              disabledBackgroundColor: theme.textColor
+                                  .withValues(alpha: 0.12),
+                              disabledForegroundColor: theme.textColor
+                                  .withValues(alpha: 0.38),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                             ),
                             child: Text(

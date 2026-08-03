@@ -37,6 +37,8 @@ IconButton _arrow(WidgetTester tester, {required bool next}) =>
 Future<List<NepaliCalendarSelection?>> _open(
   WidgetTester tester, {
   NepaliCalendarMode mode = NepaliCalendarMode.single,
+  NepaliCalendarPresentation presentation =
+      NepaliCalendarPresentation.bottomSheet,
   NepaliCalendarTheme theme = const NepaliCalendarTheme(),
   Brightness appBrightness = Brightness.light,
   Language language = Language.english,
@@ -66,6 +68,7 @@ Future<List<NepaliCalendarSelection?>> _open(
               await showNepaliCalendar(
                 context: context,
                 mode: mode,
+                presentation: presentation,
                 theme: theme,
                 language: language,
                 initialSystem: initialSystem,
@@ -776,6 +779,179 @@ void main() {
         _dayCell(tester, const NepaliDate(2081, 1, 17)).day.isDisabled,
         isTrue,
       );
+    });
+  });
+
+  group('the range edges', () {
+    // A Gregorian month at either edge reaches past what the BS table covers:
+    // April 1913 opens twelve days before 1 Baishakh 1970. Converting that month
+    // to Bikram Sambat for the header used to throw mid-build, which froze the
+    // calendar the moment the user switched to AD.
+    testWidgets('switching to AD at the start of the range does not throw', (
+      WidgetTester tester,
+    ) async {
+      await _open(
+        tester,
+        startDate: NepaliDate.min,
+        endDate: null,
+        durationDays: 60,
+      );
+
+      await tester.tap(find.text('AD'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('April 1913'), findsOneWidget);
+    });
+
+    testWidgets('and switching back again does not throw', (
+      WidgetTester tester,
+    ) async {
+      await _open(
+        tester,
+        startDate: NepaliDate.min,
+        endDate: null,
+        durationDays: 60,
+      );
+
+      await tester.tap(find.text('AD'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('BS'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Baishakh 1970'), findsOneWidget);
+    });
+
+    testWidgets('opening in AD at the start of the range does not throw', (
+      WidgetTester tester,
+    ) async {
+      await _open(
+        tester,
+        initialSystem: CalendarSystem.ad,
+        startDate: NepaliDate.min,
+        endDate: null,
+        durationDays: 60,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('the end of the range survives the switch too', (
+      WidgetTester tester,
+    ) async {
+      await _open(
+        tester,
+        startDate: NepaliDate.max.subtractDays(20),
+        endDate: NepaliDate.max,
+      );
+
+      await tester.tap(find.text('AD'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('presentation', () {
+    testWidgets('it is a bottom sheet by default', (WidgetTester tester) async {
+      await _open(tester);
+      expect(find.byType(BottomSheet), findsOneWidget);
+      expect(find.byType(Dialog), findsNothing);
+    });
+
+    testWidgets('center shows a dialog instead', (WidgetTester tester) async {
+      await _open(tester, presentation: NepaliCalendarPresentation.center);
+      expect(find.byType(Dialog), findsOneWidget);
+      expect(find.byType(BottomSheet), findsNothing);
+      // The same calendar, with the same window.
+      expect(find.text('Baishakh 2081'), findsOneWidget);
+      expect(find.text('Done'), findsOneWidget);
+    });
+
+    testWidgets('the centred dialog returns the same value', (
+      WidgetTester tester,
+    ) async {
+      final List<NepaliCalendarSelection?> results = await _open(
+        tester,
+        presentation: NepaliCalendarPresentation.center,
+      );
+
+      await _tapDay(tester, _anchor);
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+
+      expect(results.single!.date, _anchor);
+      expect(results.single!.dateTime, _anchorAd);
+    });
+
+    testWidgets('Cancel closes the centred dialog with null', (
+      WidgetTester tester,
+    ) async {
+      final List<NepaliCalendarSelection?> results = await _open(
+        tester,
+        presentation: NepaliCalendarPresentation.center,
+      );
+
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(results.single, isNull);
+      expect(find.byType(Dialog), findsNothing);
+    });
+
+    testWidgets('the centred dialog is modal by default too', (
+      WidgetTester tester,
+    ) async {
+      final List<NepaliCalendarSelection?> results = await _open(
+        tester,
+        presentation: NepaliCalendarPresentation.center,
+      );
+
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      expect(find.byType(Dialog), findsOneWidget);
+      expect(results, isEmpty);
+    });
+
+    testWidgets('range mode works in the centred dialog', (
+      WidgetTester tester,
+    ) async {
+      final List<NepaliCalendarSelection?> results = await _open(
+        tester,
+        mode: NepaliCalendarMode.range,
+        presentation: NepaliCalendarPresentation.center,
+      );
+
+      await _tapDay(tester, const NepaliDate(2081, 1, 10));
+      await _tapDay(tester, const NepaliDate(2081, 1, 16));
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+
+      expect(results.single!.range!.lengthInDays, 7);
+    });
+  });
+
+  group('the confirm button', () {
+    testWidgets('its disabled colours come from the calendar palette', (
+      WidgetTester tester,
+    ) async {
+      // A dark calendar inside a light app: Material's own disabled colours are
+      // derived from the ambient scheme and would disappear against the sheet.
+      final NepaliCalendarTheme dark = NepaliCalendarTheme.dark();
+      await _open(tester, theme: dark);
+
+      final ButtonStyle style = tester
+          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Done'))
+          .style!;
+      final Color? disabledFill = style.backgroundColor?.resolve(<WidgetState>{
+        WidgetState.disabled,
+      });
+      final Color? disabledLabel = style.foregroundColor?.resolve(<WidgetState>{
+        WidgetState.disabled,
+      });
+
+      expect(disabledFill, isNotNull);
+      expect(disabledLabel, isNotNull);
+      expect(disabledFill, isNot(dark.backgroundColor));
+      expect(disabledLabel, isNot(dark.backgroundColor));
     });
   });
 
