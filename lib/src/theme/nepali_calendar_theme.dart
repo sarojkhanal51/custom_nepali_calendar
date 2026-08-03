@@ -140,7 +140,8 @@ class NepaliCalendarTheme {
 
   /// Background of the selected segment of the BS/AD switch.
   ///
-  /// Defaults to [backgroundColor] when null.
+  /// Defaults to [headerTextColor] when null, so the selected label — painted in
+  /// [primaryColor] — stays legible against the header in any palette.
   final Color? switchActiveColor;
 
   /// Background of the unselected segment of the BS/AD switch.

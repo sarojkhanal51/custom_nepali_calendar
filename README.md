@@ -7,22 +7,77 @@ and gets the picked value back.
 Written from scratch — **no third-party dependencies**, no platform channels, no
 native code. Pure Dart and the Flutter SDK, so it runs anywhere Flutter runs.
 
-<img src="doc/screenshots/range_sheet.png" width="300" alt="Range picker open in a bottom sheet, in Nepali">
+<img src="doc/screenshots/range_sheet.png" width="280" alt="Range picker open in a bottom sheet, in Nepali">
+
+## Features
+
+Everything below is in the code — nothing aspirational.
+
+**Picking**
+
+- ✅ Opens in a modal bottom sheet — one function call, no widget to place
+- ✅ Single date **or** date range selection
+- ✅ Range band drawn across the days between the two ends
+- ✅ Confirm stays disabled until the selection is complete
+- ✅ Modal by default: a stray tap outside cannot discard a half-finished range
+- ✅ "Today" shortcut in the header
+- ✅ Month swipe and previous/next arrows
+- ✅ Selectable window via `startDate` with `endDate` or `durationDays`
+- ✅ Custom Cancel/Done labels and an optional title
+
+**Nepali calendar**
+
+- ✅ Full Bikram Sambat support, BS 1970–2199 (AD 1913–2143)
+- ✅ Live BS ⇄ AD switch that keeps the selection through the change
+- ✅ Both calendars in every cell — the BS day with its AD day underneath
+- ✅ Today's date highlighted, in either calendar
+- ✅ Saturday highlighted as the Nepali weekend
+- ✅ Previous/next month days shown around the edges of the grid
+- ✅ Verified against known Nepali New Year dates, with every day in range
+  round-tripping losslessly
+
+**Language**
+
+- ✅ Bilingual (Nepali/English), chosen by the caller
+- ✅ Devanagari numerals (१, २, ३) with Nepali month and weekday names
+- ✅ Language is independent of the calendar system — all four combinations work
+
+**Styling**
+
+- ✅ Every colour, font and metric comes from `NepaliCalendarTheme`
+- ✅ Light and dark: follow your app's `ColorScheme` with `fromTheme`, or use the
+  built-in `dark()` preset
+- ✅ Circle or rounded-square day cells, custom radius, spacing and grid lines
+- ✅ Bring your own Devanagari font via `fontFamily` / `fontPackage`
+- ✅ Width capped on tablets with `maxWidth`
+
+**Dates as values**
+
+- ✅ Standalone BS ⇄ AD conversion with no UI involved — `DateConverter`
+- ✅ `NepaliDate` with validation, weekday, day arithmetic, comparison operators
+  and pattern formatting in either language
+- ✅ `NepaliDateRange` with length, containment and Gregorian `DateTimeRange`
+  interop
+- ✅ `NepaliNumerals` for Devanagari ⇄ Latin digits anywhere in your app
+
+**Under the hood**
+
+- ✅ Zero dependencies — pure Dart, no platform channels, every Flutter platform
+- ✅ Screen-reader labels on every day cell
+- ✅ Fixed six-week grid, so the sheet never changes height while swiping
+- ✅ 161 tests covering conversion, the widget and the layout
 
 ## Install
 
-```yaml
-dependencies:
-  custom_nepali_calendar:
-    git:
-      url: https://github.com/your-org/custom_nepali_calendar.git
-  # or, from a local checkout:
-  # custom_nepali_calendar:
-  #   path: ../custom_nepali_calendar
+```console
+flutter pub add custom_nepali_calendar
 ```
 
-```console
-flutter pub get
+or in `pubspec.yaml`:
+
+```yaml
+dependencies:
+  custom_nepali_calendar: ^2.0.0
 ```
 
 ## Use
@@ -75,51 +130,51 @@ preselected: the user always picks, and the confirm button stays disabled until
 they do. Below the grid there are only the two buttons — no date readout — unless
 you pass a `title`.
 
-### Limiting the calendar: `allowedRange` and `maxDays`
+### Limiting the calendar: `startDate`, `endDate`, `durationDays`
 
-Two ways to say the same thing — the window the calendar offers. Both are
-optional, and both apply in either calendar system and either mode.
+`startDate` is required — it is where the calendar opens and the earliest day it
+offers. Where the window *closes* is optional, and you say it one of two ways:
 
 ```dart
-// A window: only these days are selectable, and the month arrows stop at the
-// window's first and last month.
+// From today, for the next 90 days (the count includes today).
 await showNepaliCalendar(
   context: context,
-  allowedRange: NepaliDateRange(
-    start: NepaliDate.now(),
-    end: NepaliDate.now().addDays(365),
-  ),
+  theme: myTheme,
+  startDate: NepaliDate.now(),
+  durationDays: 90,
 );
 
-// The same window as a day count: today and the next 89 days.
-await showNepaliCalendar(context: context, maxDays: 90);
-
-// Both: the count is measured from the window's first day, tighter end wins.
+// From today until a fixed date.
 await showNepaliCalendar(
   context: context,
-  mode: NepaliCalendarMode.range,
-  allowedRange: NepaliDateRange(
-    start: const NepaliDate(2083, 1, 1),
-    end: const NepaliDate(2083, 12, 30),
-  ),
-  maxDays: 90,          // → 1 Baishakh 2083 … 89 days later
+  theme: myTheme,
+  startDate: NepaliDate.now(),
+  endDate: const NepaliDate(2084, 12, 30),
 );
 
-// Neither passed: the whole supported range, BS 1970–2199.
-await showNepaliCalendar(context: context);
+// From today, with no end — everything the package supports.
+await showNepaliCalendar(
+  context: context,
+  theme: myTheme,
+  startDate: NepaliDate.now(),
+);
+
+// The whole supported range, back to BS 1970.
+await showNepaliCalendar(
+  context: context,
+  theme: myTheme,
+  startDate: NepaliDate.min,
+);
 ```
 
-* `maxDays` counts from `allowedRange`'s first day, or from **today** when no
-  range is given, and includes that first day — so `maxDays: 90` alone means
-  today plus the next 89.
-* Days outside the resulting window render greyed out and are not tappable, and
-  the month arrows stop at the window's first and last month. A picked range
-  therefore can never be longer than the window.
-* Both apply to single and range mode, and in both Bikram Sambat and Gregorian
-  view — the window is a set of days, not of month labels.
-* The sheet opens on the window's first month; with no window it opens on the
-  current month.
-* Holding Gregorian dates? `NepaliDateRange.fromDateTimes(start: ..., end: ...)`.
+* `endDate` and `durationDays` are two ways of saying the same thing, so pass at
+  most one — an assertion catches both.
+* `durationDays` **counts the start day**, so `durationDays: 90` means the start
+  plus the next 89.
+* Days outside the window are greyed out and untappable, and the month arrows
+  stop at its first and last month — so a picked range can never be longer than
+  the window.
+* Holding Gregorian dates? `NepaliDate.fromDateTime(myDateTime)`.
 
 ### All parameters
 
@@ -128,19 +183,17 @@ await showNepaliCalendar(
   context: context,
 
   mode: NepaliCalendarMode.single,          // or .range
-  theme: const NepaliCalendarTheme(...),    // your colours — see below
+  theme: const NepaliCalendarTheme(...),    // REQUIRED — your colours, see below
 
-  allowedRange: NepaliDateRange(            // optional window — see below
-    start: NepaliDate.now(),
-    end: const NepaliDate(2084, 12, 30),
-  ),
-  maxDays: 90,                              // …or give the window as a length
+  startDate: NepaliDate.now(),              // REQUIRED — where the calendar opens
+  endDate: const NepaliDate(2084, 12, 30),  // …or durationDays, not both
+  durationDays: 90,
 
   language: Language.english,               // or Language.nepali (fixed by you)
   initialSystem: CalendarSystem.bs,         // or CalendarSystem.ad
 
   showSystemSwitch: true,                   // the BS/AD toggle in the header
-  isDismissible: true,                      // false to force Cancel/Done
+  isDismissible: false,                     // default; true allows tap-outside
 
   title: 'Delivery date',                   // optional caption above the buttons
   confirmLabel: 'Apply',
@@ -180,6 +233,22 @@ const NepaliCalendarTheme(
 
 Shortcuts: `NepaliCalendarTheme.dark()`, `NepaliCalendarTheme.fromTheme(Theme.of(context))`
 to follow the host app's `ColorScheme`, and `copyWith` on any instance.
+
+### Light and dark
+
+There is one `theme` parameter, and it is required — light and dark are just
+different values for it:
+
+```dart
+// follows the host app, including its light/dark mode
+theme: NepaliCalendarTheme.fromTheme(Theme.of(context)),
+
+// always dark
+theme: NepaliCalendarTheme.dark(),
+
+// hand-tuned per mode, decided with the brightness you already have
+theme: Theme.of(context).brightness == Brightness.dark ? myDark : myLight,
+```
 
 Android and iOS both ship a Devanagari-capable system font, so Nepali text renders
 with no configuration; set `fontFamily` (plus `fontPackage` if it lives in another

@@ -3,14 +3,13 @@ library;
 
 import 'package:flutter/material.dart';
 
-import '../converters/date_conversion_exception.dart';
-import '../converters/date_converter.dart';
 import '../localization/calendar_strings.dart';
 import '../models/nepali_date.dart';
 import '../models/nepali_date_range.dart';
 import '../theme/nepali_calendar_theme.dart';
 import '../view/calendar_controller.dart';
 import '../view/calendar_view.dart';
+import 'calendar_window.dart';
 
 /// Whether the calendar collects a single day or a start/end pair.
 enum NepaliCalendarMode {
@@ -73,23 +72,26 @@ class NepaliCalendarSelection {
 
 /// Opens the Nepali calendar in a modal bottom sheet and returns what was picked.
 ///
-/// Resolves to `null` when the sheet is dismissed — Cancel, a swipe down, the
-/// back gesture, or a tap outside — so a null check is all the handling needed.
+/// Resolves to `null` when the user backs out — so a null check is all the
+/// handling needed.
+///
+/// By default the sheet is modal: tapping the barrier or dragging it down does
+/// nothing, and the user leaves through Cancel or Done. Pass
+/// `isDismissible: true` to allow tap-outside and swipe-down as well. The system
+/// back gesture always pops the sheet either way.
 ///
 /// ```dart
 /// final selection = await showNepaliCalendar(
 ///   context: context,
 ///   mode: NepaliCalendarMode.range,          // or .single (the default)
-///   theme: const NepaliCalendarTheme(
-///     primaryColor: Color(0xFF0B7285),       // header + active switch
+///   theme: const NepaliCalendarTheme(              // required
+///     primaryColor: Color(0xFF0B7285),            // header + active switch
 ///     selectedDayColor: Color(0xFFE8590C),
-///     weekendColor: Color(0xFFE03131),       // Saturday
+///     weekendColor: Color(0xFFE03131),            // Saturday
 ///   ),
-///   allowedRange: NepaliDateRange(               // optional window; omit for
-///     start: NepaliDate.now(),                   // the whole supported range
-///     end: NepaliDate.now().addDays(365),
-///   ),
-///   maxDays: 90,                                 // …or say it as a length
+
+///   startDate: NepaliDate.now(),                 // required: where it opens
+///   durationDays: 90,                            // …or endDate: someDate
 /// );
 ///
 /// if (selection != null) {
@@ -102,46 +104,61 @@ class NepaliCalendarSelection {
 /// end; the days between are banded, and the confirm button stays disabled until
 /// both ends exist.
 ///
-/// * [theme] carries every colour the sheet paints with — see
-///   [NepaliCalendarTheme], which has usable defaults for anything left out.
+/// * [theme] carries every colour the sheet paints with, and is required. Each of
+///   its fields has a usable default, so `const NepaliCalendarTheme()` is a valid
+///   thing to pass. For a sheet that follows the host app — including its light
+///   or dark mode — pass `NepaliCalendarTheme.fromTheme(Theme.of(context))`;
+///   for a fixed dark look, `NepaliCalendarTheme.dark()`.
 /// * Nothing is preselected. The sheet opens on [allowedRange]'s first month, or
 ///   on the current month when unbounded, and confirm stays disabled until the
 ///   user picks.
-/// * [allowedRange] is the window the calendar offers: days outside it are
-///   greyed out and the arrows stop at its first and last month. Omit it for the
-///   whole supported range (BS 1970-2199). Build one from Gregorian dates with
-///   `NepaliDateRange.fromDateTimes(start: ..., end: ...)`.
-/// * [maxDays] expresses the same window as a length instead of an end date:
-///   counted from [allowedRange]'s first day, or from today when no range is
-///   given, so `maxDays: 90` on its own means "today and the next 89 days".
-///   Given both, the tighter end wins. It applies in both modes, and a range can
-///   never be longer than the window it is picked from.
+/// * [startDate] is where the calendar opens and the earliest day it offers —
+///   pass `NepaliDate.now()` for "from today", or `NepaliDate.min` to go back as
+///   far as the package can.
+/// * [endDate] and [durationDays] are two ways of saying where the window
+///   closes, and only one may be given. [durationDays] counts the start day, so
+///   `durationDays: 90` means the start plus the next 89. With neither, the
+///   window runs to the end of the supported range.
+/// * Days outside the window are greyed out and the month arrows stop at its
+///   first and last month, so a range can never be longer than the window it is
+///   picked from.
 /// * [language] picks English or Nepali labels, and [initialSystem] picks the
 ///   calendar the sheet opens in. The user can switch Bikram Sambat/Gregorian
 ///   from the header unless [showSystemSwitch] is false; the language is fixed by
 ///   the caller and is not switchable in the sheet.
 /// * [title] adds an optional caption above the buttons — nothing is shown there
 ///   otherwise. [confirmLabel] and [cancelLabel] override the button text.
+/// * [isDismissible] defaults to `false`, so a stray tap on the barrier cannot
+///   throw away a half-finished range. Set it to `true` for a sheet the user can
+///   flick away.
 Future<NepaliCalendarSelection?> showNepaliCalendar({
   required BuildContext context,
+  required NepaliCalendarTheme theme,
   NepaliCalendarMode mode = NepaliCalendarMode.single,
-  NepaliCalendarTheme theme = const NepaliCalendarTheme(),
   Language language = Language.english,
   CalendarSystem initialSystem = CalendarSystem.bs,
-  NepaliDateRange? allowedRange,
-  int? maxDays,
+  required NepaliDate startDate,
+  NepaliDate? endDate,
+  int? durationDays,
   bool showSystemSwitch = true,
-  bool isDismissible = true,
+  bool isDismissible = false,
   String? title,
   String? confirmLabel,
   String? cancelLabel,
   double maxWidth = 480,
 }) {
   assert(
-    allowedRange == null || allowedRange.isValid,
-    'allowedRange must be two real dates with start on or before end.',
+    endDate == null || durationDays == null,
+    'Give the window an endDate or a durationDays, not both.',
   );
-  assert(maxDays == null || maxDays > 0, 'maxDays must be greater than zero.');
+  assert(
+    endDate == null || startDate <= endDate,
+    'endDate must not be before startDate.',
+  );
+  assert(
+    durationDays == null || durationDays > 0,
+    'durationDays must be greater than zero.',
+  );
   return showModalBottomSheet<NepaliCalendarSelection>(
     context: context,
     isDismissible: isDismissible,
@@ -160,37 +177,17 @@ Future<NepaliCalendarSelection?> showNepaliCalendar({
       theme: theme,
       language: language,
       initialSystem: initialSystem,
-      allowedRange: _resolveWindow(allowedRange, maxDays),
+      allowedRange: resolveCalendarWindow(
+        startDate: startDate,
+        endDate: endDate,
+        durationDays: durationDays,
+      ),
       showSystemSwitch: showSystemSwitch,
       title: title,
       confirmLabel: confirmLabel,
       cancelLabel: cancelLabel,
     ),
   );
-}
-
-/// Combines [allowedRange] and [maxDays] into the one window the calendar shows.
-///
-/// [maxDays] is a length, counted from the window's first day — or from today
-/// when there is no window — so `maxDays: 90` on its own means "today and the
-/// next 89 days". When both are given the tighter end wins; when neither is, the
-/// calendar offers its whole supported range.
-NepaliDateRange? _resolveWindow(NepaliDateRange? allowedRange, int? maxDays) {
-  if (maxDays == null) {
-    return allowedRange;
-  }
-  final NepaliDate start = allowedRange?.start ?? DateConverter.todayBs();
-  NepaliDate capEnd;
-  try {
-    capEnd = start.addDays(maxDays - 1);
-  } on DateConversionException {
-    capEnd = NepaliDate.max;
-  }
-  final NepaliDate? windowEnd = allowedRange?.end;
-  final NepaliDate end = windowEnd != null && windowEnd < capEnd
-      ? windowEnd
-      : capEnd;
-  return NepaliDateRange(start: start, end: end);
 }
 
 class _CalendarSheet extends StatefulWidget {

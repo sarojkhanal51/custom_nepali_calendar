@@ -1,3 +1,47 @@
+## 2.0.0
+
+### Breaking
+
+* `theme` is now required. Every field of `NepaliCalendarTheme` still has a
+  default, so `const NepaliCalendarTheme()` remains valid to pass; the change is
+  that the palette is always an explicit decision at the call site.
+* `allowedRange` and `maxDays` are replaced by a required `startDate` plus an
+  optional `endDate` **or** `durationDays` — two ways of saying where the window
+  closes, of which at most one may be given. `durationDays` counts the start day,
+  so `durationDays: 90` means the start plus the next 89. The window bounds
+  navigation as well as selection, in both modes and both calendar systems.
+* `isDismissible` now defaults to `false`, so the sheet is modal: a tap on the
+  barrier or a downward drag no longer discards a half-finished range, and the
+  user leaves through Cancel or Done. Pass `isDismissible: true` for the old
+  behaviour.
+
+### Added
+
+* `HorizontalDateStrip`, an inline row of consecutive days with the full calendar
+  one tap away. Takes the same `startDate` / `endDate` / `durationDays` window,
+  shows "Today" or the month above each date and the weekday below, selects a day
+  on first build and reports it, and re-anchors when a date outside the strip is
+  picked from the calendar.
+
+### Fixed
+
+* The "Today" button slid to the leading edge of the header when
+  `showSystemSwitch` was `false`, instead of staying on the trailing edge.
+* The selected segment of the BS/AD switch was unreadable in dark palettes: its
+  pill fell back to `backgroundColor` while its label used `primaryColor`, two
+  near-identical darks. The pill now falls back to `headerTextColor`, which is
+  the colour already chosen to be legible against the header.
+* The `MMM` format token no longer abbreviates Devanagari month names, which
+  could separate a vowel mark from its consonant.
+* The package description was over pub.dev's 180-character limit, costing 10 pub
+  points.
+
+### Notes
+
+* Light and dark both run through the single `theme` parameter: pass
+  `NepaliCalendarTheme.fromTheme(Theme.of(context))` to follow the host app
+  including its brightness, or `NepaliCalendarTheme.dark()` for a fixed dark look.
+
 ## 1.0.0
 
 Initial release.

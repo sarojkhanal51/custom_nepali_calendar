@@ -1,4 +1,6 @@
 import 'package:custom_nepali_calendar/custom_nepali_calendar.dart';
+import 'package:custom_nepali_calendar/src/view/calendar_header.dart';
+import 'package:custom_nepali_calendar/src/view/calendar_switch.dart';
 import 'package:custom_nepali_calendar/src/view/day_cell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,10 +9,8 @@ import 'package:flutter_test/flutter_test.dart';
 /// the visible month to Baishakh 2081 (13 April – 13 May 2024) no matter when
 /// the suite runs. 15 Baishakh 2081 BS = 27 April 2024 AD.
 const NepaliDate _anchor = NepaliDate(2081, 1, 15);
-const NepaliDateRange _year2081 = NepaliDateRange(
-  start: NepaliDate(2081, 1, 1),
-  end: NepaliDate(2081, 12, 31),
-);
+const NepaliDate _yearStart = NepaliDate(2081, 1, 1);
+const NepaliDate _yearEnd = NepaliDate(2081, 12, 31);
 final DateTime _anchorAd = DateTime(2024, 4, 27);
 
 Finder _cellFor(NepaliDate date) => find.byWidgetPredicate(
@@ -33,17 +33,19 @@ IconButton _arrow(WidgetTester tester, {required bool next}) =>
 
 /// Opens the sheet from a button and records whatever it resolves to.
 ///
-/// Bounds default to the BS 2081 window; pass `allowedRange: null` for the
-/// unbounded case.
+/// Bounds default to the BS 2081 window.
 Future<List<NepaliCalendarSelection?>> _open(
   WidgetTester tester, {
   NepaliCalendarMode mode = NepaliCalendarMode.single,
   NepaliCalendarTheme theme = const NepaliCalendarTheme(),
+  Brightness appBrightness = Brightness.light,
   Language language = Language.english,
   CalendarSystem initialSystem = CalendarSystem.bs,
-  NepaliDateRange? allowedRange = _year2081,
-  int? maxDays,
+  NepaliDate startDate = _yearStart,
+  NepaliDate? endDate = _yearEnd,
+  int? durationDays,
   bool showSystemSwitch = true,
+  bool isDismissible = false,
   String? title,
   String? confirmLabel,
   String? cancelLabel,
@@ -51,6 +53,12 @@ Future<List<NepaliCalendarSelection?>> _open(
   final List<NepaliCalendarSelection?> results = <NepaliCalendarSelection?>[];
   await tester.pumpWidget(
     MaterialApp(
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF6D28D9),
+          brightness: appBrightness,
+        ),
+      ),
       home: Scaffold(
         body: Builder(
           builder: (BuildContext context) => TextButton(
@@ -61,9 +69,11 @@ Future<List<NepaliCalendarSelection?>> _open(
                 theme: theme,
                 language: language,
                 initialSystem: initialSystem,
-                allowedRange: allowedRange,
-                maxDays: maxDays,
+                startDate: startDate,
+                endDate: endDate,
+                durationDays: durationDays,
                 showSystemSwitch: showSystemSwitch,
+                isDismissible: isDismissible,
                 title: title,
                 confirmLabel: confirmLabel,
                 cancelLabel: cancelLabel,
@@ -163,10 +173,23 @@ void main() {
       expect(results.single, isNull);
     });
 
-    testWidgets('tapping outside the sheet resolves to null', (
+    testWidgets('by default a tap outside does not dismiss the sheet', (
       WidgetTester tester,
     ) async {
       final List<NepaliCalendarSelection?> results = await _open(tester);
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      expect(find.byType(BottomSheet), findsOneWidget);
+      expect(results, isEmpty, reason: 'the sheet should not have resolved');
+    });
+
+    testWidgets('isDismissible: true lets a tap outside resolve to null', (
+      WidgetTester tester,
+    ) async {
+      final List<NepaliCalendarSelection?> results = await _open(
+        tester,
+        isDismissible: true,
+      );
       await tester.tapAt(const Offset(10, 10));
       await tester.pumpAndSettle();
       expect(results.single, isNull);
@@ -379,6 +402,101 @@ void main() {
     });
   });
 
+  group('light and dark palettes', () {
+    Color headerColor(WidgetTester tester) => tester
+        .widgetList<Container>(
+          find.descendant(
+            of: find.byType(CalendarHeader),
+            matching: find.byType(Container),
+          ),
+        )
+        .first
+        .color!;
+
+    testWidgets('the passed theme is what gets painted', (
+      WidgetTester tester,
+    ) async {
+      const NepaliCalendarTheme brand = NepaliCalendarTheme(
+        primaryColor: Color(0xFF112233),
+      );
+      await _open(tester, theme: brand);
+      expect(headerColor(tester), brand.primaryColor);
+    });
+
+    testWidgets('the dark preset paints dark whatever the app is doing', (
+      WidgetTester tester,
+    ) async {
+      await _open(tester, theme: NepaliCalendarTheme.dark());
+      expect(headerColor(tester), NepaliCalendarTheme.dark().primaryColor);
+    });
+
+    testWidgets('fromTheme follows a light app', (WidgetTester tester) async {
+      final ThemeData app = ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6D28D9)),
+      );
+      await _open(tester, theme: NepaliCalendarTheme.fromTheme(app));
+      expect(headerColor(tester), app.colorScheme.primary);
+    });
+
+    testWidgets('the active switch segment stays legible in every preset', (
+      WidgetTester tester,
+    ) async {
+      // The selected label is painted in primaryColor on top of the pill, so the
+      // two must not collapse into each other — as they did when the pill fell
+      // back to backgroundColor in the dark preset.
+      for (final NepaliCalendarTheme palette in <NepaliCalendarTheme>[
+        const NepaliCalendarTheme(),
+        NepaliCalendarTheme.dark(),
+      ]) {
+        await _open(tester, theme: palette);
+
+        final Color fill = tester
+            .widgetList<AnimatedContainer>(
+              find.descendant(
+                of: find.byType(CalendarSwitch),
+                matching: find.byType(AnimatedContainer),
+              ),
+            )
+            .map(
+              (AnimatedContainer c) => (c.decoration! as BoxDecoration).color!,
+            )
+            .firstWhere((Color c) => c.a != 0);
+        final Color label = tester.widget<Text>(find.text('BS')).style!.color!;
+
+        expect(
+          ThemeData.estimateBrightnessForColor(fill),
+          isNot(ThemeData.estimateBrightnessForColor(label)),
+          reason: 'active pill $fill and its label $label read the same',
+        );
+
+        await tester.tap(find.text('Cancel'));
+        await tester.pumpAndSettle();
+      }
+    });
+
+    testWidgets('fromTheme follows a dark app', (WidgetTester tester) async {
+      final ThemeData app = ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF6D28D9),
+          brightness: Brightness.dark,
+        ),
+      );
+      await _open(
+        tester,
+        theme: NepaliCalendarTheme.fromTheme(app),
+        appBrightness: Brightness.dark,
+      );
+      expect(headerColor(tester), app.colorScheme.primary);
+      // A dark scheme yields a dark surface, so the sheet reads as dark.
+      expect(
+        ThemeData.estimateBrightnessForColor(
+          NepaliCalendarTheme.fromTheme(app).backgroundColor,
+        ),
+        Brightness.dark,
+      );
+    });
+  });
+
   group('language and calendar system', () {
     testWidgets('Nepali renders Devanagari everywhere', (
       WidgetTester tester,
@@ -439,58 +557,109 @@ void main() {
       expect(find.text('AD'), findsNothing);
       expect(find.text('Today'), findsOneWidget);
     });
+
+    testWidgets('Today stays on the right when the switch is hidden', (
+      WidgetTester tester,
+    ) async {
+      await _open(tester, showSystemSwitch: false);
+
+      final Rect header = tester.getRect(find.byType(CalendarHeader));
+      expect(
+        tester.getCenter(find.text('Today')).dx,
+        greaterThan(header.center.dx),
+        reason: 'Today slid to the leading edge with nothing to space against',
+      );
+    });
+
+    testWidgets('with the switch shown, it leads and Today trails', (
+      WidgetTester tester,
+    ) async {
+      await _open(tester);
+
+      final Rect header = tester.getRect(find.byType(CalendarHeader));
+      expect(tester.getCenter(find.text('BS')).dx, lessThan(header.center.dx));
+      expect(
+        tester.getCenter(find.text('Today')).dx,
+        greaterThan(header.center.dx),
+      );
+    });
   });
 
-  group('startDate / endDate window', () {
-    testWidgets('with no bounds the sheet opens on the current month', (
-      WidgetTester tester,
-    ) async {
-      await _open(tester, allowedRange: null);
-
-      final NepaliDate today = DateConverter.todayBs();
-      expect(find.text(today.format('MMMM yyyy')), findsOneWidget);
-      expect(_dayCell(tester, today).day.isDisabled, isFalse);
-      expect(_dayCell(tester, today).day.isToday, isTrue);
-      // The whole supported range stays reachable in both directions.
-      expect(_arrow(tester, next: false).onPressed, isNotNull);
-      expect(_arrow(tester, next: true).onPressed, isNotNull);
-    });
-
-    testWidgets("the sheet opens on the window's first month", (
+  group('the window: startDate, endDate, durationDays', () {
+    testWidgets('it opens on startDate and offers nothing earlier', (
       WidgetTester tester,
     ) async {
       await _open(
         tester,
-        allowedRange: const NepaliDateRange(
-          start: NepaliDate(2090, 5, 1),
-          end: NepaliDate(2090, 7, 30),
-        ),
-      );
-      expect(find.text('Bhadra 2090'), findsOneWidget);
-    });
-
-    testWidgets('days outside the window are greyed out and inert', (
-      WidgetTester tester,
-    ) async {
-      await _open(
-        tester,
-        allowedRange: const NepaliDateRange(
-          start: NepaliDate(2081, 1, 10),
-          end: NepaliDate(2081, 1, 20),
-        ),
+        startDate: const NepaliDate(2081, 1, 10),
+        endDate: const NepaliDate(2081, 1, 20),
       );
 
+      expect(find.text('Baishakh 2081'), findsOneWidget);
       expect(
         _dayCell(tester, const NepaliDate(2081, 1, 9)).day.isDisabled,
         isTrue,
       );
       expect(_dayCell(tester, const NepaliDate(2081, 1, 9)).onTap, isNull);
+      expect(_dayCell(tester, const NepaliDate(2081, 1, 10)).onTap, isNotNull);
+      expect(_arrow(tester, next: false).onPressed, isNull);
+    });
+
+    testWidgets('endDate closes the window', (WidgetTester tester) async {
+      await _open(
+        tester,
+        startDate: const NepaliDate(2081, 1, 10),
+        endDate: const NepaliDate(2081, 1, 20),
+      );
+
+      expect(_dayCell(tester, const NepaliDate(2081, 1, 20)).onTap, isNotNull);
       expect(
         _dayCell(tester, const NepaliDate(2081, 1, 21)).day.isDisabled,
         isTrue,
       );
-      expect(_dayCell(tester, const NepaliDate(2081, 1, 10)).onTap, isNotNull);
-      expect(_dayCell(tester, const NepaliDate(2081, 1, 20)).onTap, isNotNull);
+      expect(_arrow(tester, next: true).onPressed, isNull);
+    });
+
+    testWidgets('durationDays counts the start day', (
+      WidgetTester tester,
+    ) async {
+      // 7 days from the 10th means the 10th through the 16th.
+      await _open(
+        tester,
+        startDate: const NepaliDate(2081, 1, 10),
+        endDate: null,
+        durationDays: 7,
+      );
+
+      expect(
+        _dayCell(tester, const NepaliDate(2081, 1, 16)).day.isDisabled,
+        isFalse,
+      );
+      expect(
+        _dayCell(tester, const NepaliDate(2081, 1, 17)).day.isDisabled,
+        isTrue,
+      );
+      expect(
+        _dayCell(tester, const NepaliDate(2081, 1, 9)).day.isDisabled,
+        isTrue,
+      );
+    });
+
+    testWidgets('with neither, the window runs to the supported end', (
+      WidgetTester tester,
+    ) async {
+      await _open(
+        tester,
+        startDate: const NepaliDate(2081, 1, 10),
+        endDate: null,
+      );
+
+      expect(
+        _dayCell(tester, const NepaliDate(2081, 1, 31)).day.isDisabled,
+        isFalse,
+      );
+      expect(_arrow(tester, next: true).onPressed, isNotNull);
+      expect(_arrow(tester, next: false).onPressed, isNull);
     });
 
     testWidgets('both ends of the window are pickable', (
@@ -498,10 +667,8 @@ void main() {
     ) async {
       final List<NepaliCalendarSelection?> results = await _open(
         tester,
-        allowedRange: const NepaliDateRange(
-          start: NepaliDate(2081, 1, 10),
-          end: NepaliDate(2081, 1, 20),
-        ),
+        startDate: const NepaliDate(2081, 1, 10),
+        endDate: const NepaliDate(2081, 1, 20),
       );
 
       await _tapDay(tester, const NepaliDate(2081, 1, 20));
@@ -515,10 +682,8 @@ void main() {
     ) async {
       await _open(
         tester,
-        allowedRange: const NepaliDateRange(
-          start: NepaliDate(2081, 1, 10),
-          end: NepaliDate(2081, 1, 20),
-        ),
+        startDate: const NepaliDate(2081, 1, 10),
+        endDate: const NepaliDate(2081, 1, 20),
       );
       expect(_arrow(tester, next: true).onPressed, isNull);
       expect(_arrow(tester, next: false).onPressed, isNull);
@@ -529,10 +694,8 @@ void main() {
     ) async {
       await _open(
         tester,
-        allowedRange: const NepaliDateRange(
-          start: NepaliDate(2081, 1, 5),
-          end: NepaliDate(2081, 3, 5),
-        ),
+        startDate: const NepaliDate(2081, 1, 5),
+        endDate: const NepaliDate(2081, 3, 5),
       );
 
       expect(find.text('Baishakh 2081'), findsOneWidget);
@@ -544,129 +707,22 @@ void main() {
       expect(_arrow(tester, next: true).onPressed, isNull);
     });
 
-    testWidgets('a window wider than a month leaves the far side open', (
-      WidgetTester tester,
-    ) async {
-      await _open(
-        tester,
-        allowedRange: const NepaliDateRange(
-          start: NepaliDate(2081, 1, 10),
-          end: NepaliDate(2081, 6, 20),
-        ),
-      );
-      expect(
-        _dayCell(tester, const NepaliDate(2081, 1, 9)).day.isDisabled,
-        isTrue,
-      );
-      expect(
-        _dayCell(tester, const NepaliDate(2081, 1, 31)).day.isDisabled,
-        isFalse,
-      );
-      expect(_arrow(tester, next: true).onPressed, isNotNull);
-      expect(_arrow(tester, next: false).onPressed, isNull);
-    });
-
-    testWidgets('a range cannot cross the window edges', (
-      WidgetTester tester,
-    ) async {
-      await _open(
-        tester,
-        mode: NepaliCalendarMode.range,
-        allowedRange: const NepaliDateRange(
-          start: NepaliDate(2081, 1, 10),
-          end: NepaliDate(2081, 1, 20),
-        ),
-      );
-
-      expect(_cellFor(const NepaliDate(2081, 1, 25)), findsOneWidget);
-      expect(_dayCell(tester, const NepaliDate(2081, 1, 25)).onTap, isNull);
-    });
-  });
-
-  group('maxDays', () {
-    testWidgets('on its own it counts forward from today', (
-      WidgetTester tester,
-    ) async {
-      // Asserted relative to today so the test holds whenever it runs; the exact
-      // boundary is pinned by the allowedRange cases below.
-      await _open(tester, allowedRange: null, maxDays: 30);
-
-      final NepaliDate today = DateConverter.todayBs();
-      expect(find.text(today.format('MMMM yyyy')), findsOneWidget);
-      expect(_dayCell(tester, today).day.isDisabled, isFalse);
-      expect(_dayCell(tester, today).onTap, isNotNull);
-      // The window starts today, so there is nothing earlier to navigate to.
-      expect(_arrow(tester, next: false).onPressed, isNull);
-    });
-
-    testWidgets('combined with allowedRange, the tighter end wins', (
-      WidgetTester tester,
-    ) async {
-      await _open(
-        tester,
-        allowedRange: const NepaliDateRange(
-          start: NepaliDate(2081, 1, 10),
-          end: NepaliDate(2081, 12, 30),
-        ),
-        maxDays: 7,
-      );
-
-      expect(
-        _dayCell(tester, const NepaliDate(2081, 1, 16)).day.isDisabled,
-        isFalse,
-      );
-      expect(
-        _dayCell(tester, const NepaliDate(2081, 1, 17)).day.isDisabled,
-        isTrue,
-      );
-      expect(_arrow(tester, next: true).onPressed, isNull);
-    });
-
-    testWidgets('a shorter allowedRange wins over a longer maxDays', (
-      WidgetTester tester,
-    ) async {
-      await _open(
-        tester,
-        allowedRange: const NepaliDateRange(
-          start: NepaliDate(2081, 1, 10),
-          end: NepaliDate(2081, 1, 14),
-        ),
-        maxDays: 30,
-      );
-
-      expect(
-        _dayCell(tester, const NepaliDate(2081, 1, 14)).day.isDisabled,
-        isFalse,
-      );
-      expect(
-        _dayCell(tester, const NepaliDate(2081, 1, 15)).day.isDisabled,
-        isTrue,
-      );
-    });
-
-    testWidgets('null means no limit at all', (WidgetTester tester) async {
-      await _open(tester, allowedRange: null);
-
-      final NepaliDate today = DateConverter.todayBs();
-      expect(_dayCell(tester, today.addDays(20)).day.isDisabled, isFalse);
-      expect(_arrow(tester, next: false).onPressed, isNotNull);
-      expect(_arrow(tester, next: true).onPressed, isNotNull);
-    });
-
     testWidgets('a range cannot be longer than the window', (
       WidgetTester tester,
     ) async {
       final List<NepaliCalendarSelection?> results = await _open(
         tester,
         mode: NepaliCalendarMode.range,
-        allowedRange: const NepaliDateRange(
-          start: NepaliDate(2081, 1, 10),
-          end: NepaliDate(2081, 12, 30),
-        ),
-        maxDays: 7,
+        startDate: const NepaliDate(2081, 1, 10),
+        endDate: null,
+        durationDays: 7,
       );
 
       await _tapDay(tester, const NepaliDate(2081, 1, 10));
+      // The 17th is on the page but past the window, so it cannot extend the
+      // range beyond seven days.
+      expect(_dayCell(tester, const NepaliDate(2081, 1, 17)).onTap, isNull);
+
       await _tapDay(tester, const NepaliDate(2081, 1, 16));
       await tester.tap(find.text('Done'));
       await tester.pumpAndSettle();
@@ -680,14 +736,11 @@ void main() {
       await _open(
         tester,
         initialSystem: CalendarSystem.ad,
-        allowedRange: const NepaliDateRange(
-          start: NepaliDate(2081, 1, 10),
-          end: NepaliDate(2081, 12, 30),
-        ),
-        maxDays: 7,
+        startDate: const NepaliDate(2081, 1, 10),
+        endDate: null,
+        durationDays: 7,
       );
 
-      // Same days are blocked whichever calendar is on screen.
       expect(find.text('April 2024'), findsOneWidget);
       expect(
         _dayCell(tester, const NepaliDate(2081, 1, 9)).day.isDisabled,
@@ -708,11 +761,9 @@ void main() {
     ) async {
       await _open(
         tester,
-        allowedRange: const NepaliDateRange(
-          start: NepaliDate(2081, 1, 10),
-          end: NepaliDate(2081, 12, 30),
-        ),
-        maxDays: 7,
+        startDate: const NepaliDate(2081, 1, 10),
+        endDate: null,
+        durationDays: 7,
       );
 
       await tester.tap(find.text('AD'));

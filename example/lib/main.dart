@@ -53,8 +53,9 @@ class _DemoScreenState extends State<DemoScreen> {
       context: context,
       theme: _theme,
       language: _language,
-      // The same limit applies to single picking, in either calendar.
-      maxDays: 90,
+      // Today, and the ninety days after it.
+      startDate: NepaliDate.now(),
+      durationDays: 90,
     );
 
     setState(() {
@@ -77,8 +78,8 @@ class _DemoScreenState extends State<DemoScreen> {
       theme: _theme,
       language: _language,
       // The window the calendar offers: today plus the next 89 days.
-      // Omit it for the whole supported range.
-      maxDays: 90,
+      startDate: NepaliDate.now(),
+      durationDays: 90,
     );
 
     setState(() {

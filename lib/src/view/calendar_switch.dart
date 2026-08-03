@@ -71,8 +71,12 @@ class _Segment extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The switch sits on the header, and the active label is painted in
+    // primaryColor — so the pill behind it has to contrast with the header, not
+    // with the sheet body. headerTextColor is the colour already chosen to be
+    // legible there, which keeps the pair readable in light and dark alike.
     final Color activeBackground =
-        theme.switchActiveColor ?? theme.backgroundColor;
+        theme.switchActiveColor ?? theme.headerTextColor;
     return Semantics(
       button: true,
       selected: isActive,

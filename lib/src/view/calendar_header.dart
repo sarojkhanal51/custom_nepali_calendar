@@ -114,11 +114,15 @@ class CalendarHeader extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 4),
             // A Wrap rather than a Row: on a narrow phone the Nepali labels
             // ("वि.सं.", "आज") are wide enough that one line could overflow, so
-            // the controls move onto a second line instead.
+            // the controls move onto a second line instead. With the BS/AD
+            // switch hidden there is nothing to space against, so Today is
+            // pinned to the trailing edge rather than sliding to the leading one.
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
-              alignment: WrapAlignment.spaceBetween,
+              alignment: showSystemSwitch
+                  ? WrapAlignment.spaceBetween
+                  : WrapAlignment.end,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: <Widget>[
                 if (showSystemSwitch)
