@@ -1,3 +1,11 @@
+## 3.0.0
+
+### Breaking
+
+* Removed `title` from `showNepaliCalendar`. The calendar does not need a title
+  of its own — the surrounding screen already says what is being picked. Drop
+  the argument; nothing else changes.
+
 ## 2.1.1
 
 ### Fixed

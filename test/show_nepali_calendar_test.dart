@@ -48,7 +48,6 @@ Future<List<NepaliCalendarSelection?>> _open(
   int? durationDays,
   bool showSystemSwitch = true,
   bool isDismissible = false,
-  String? title,
   String? confirmLabel,
   String? cancelLabel,
 }) async {
@@ -77,7 +76,6 @@ Future<List<NepaliCalendarSelection?>> _open(
                 durationDays: durationDays,
                 showSystemSwitch: showSystemSwitch,
                 isDismissible: isDismissible,
-                title: title,
                 confirmLabel: confirmLabel,
                 cancelLabel: cancelLabel,
               ),
@@ -959,30 +957,19 @@ void main() {
     testWidgets('custom labels replace the defaults', (
       WidgetTester tester,
     ) async {
-      await _open(
-        tester,
-        title: 'Delivery date',
-        confirmLabel: 'Apply',
-        cancelLabel: 'Back',
-      );
-      expect(find.text('Delivery date'), findsOneWidget);
-      // A heading, so it sits above the calendar rather than under the grid.
-      expect(
-        tester.getTopLeft(find.text('Delivery date')).dy,
-        lessThan(tester.getTopLeft(find.byType(CalendarHeader)).dy),
-      );
+      await _open(tester, confirmLabel: 'Apply', cancelLabel: 'Back');
       expect(find.text('Apply'), findsOneWidget);
       expect(find.text('Back'), findsOneWidget);
       expect(find.text('Done'), findsNothing);
     });
 
-    testWidgets('without a title the sheet is just grid and buttons', (
+    testWidgets('the sheet is just header, grid and buttons', (
       WidgetTester tester,
     ) async {
       await _open(tester);
       await _tapDay(tester, _anchor);
 
-      // Everything between the weekday grid and the buttons is gone.
+      // Nothing sits between the weekday grid and the buttons.
       expect(find.text('Select a date'), findsNothing);
       expect(find.text('15 Bai 2081'), findsNothing);
       expect(find.text('Done'), findsOneWidget);

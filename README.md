@@ -24,7 +24,7 @@ Everything below is in the code — nothing aspirational.
 - ✅ Month swipe and previous/next arrows
 - ✅ Selectable window via `startDate` with `endDate` or `durationDays`
 - ✅ `HorizontalDateStrip`: an inline row of days with the calendar one tap away
-- ✅ Custom Cancel/Done labels and an optional heading
+- ✅ Custom Cancel/Done labels
 
 **Nepali calendar**
 
@@ -78,7 +78,7 @@ or in `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  custom_nepali_calendar: ^2.0.0
+  custom_nepali_calendar: ^3.0.0
 ```
 
 ## Use
@@ -181,8 +181,8 @@ ends exist.
 The sheet shows a BS/AD toggle and nothing else — the language is whatever the
 caller passed and cannot be changed from inside the sheet. Nothing is
 preselected: the user always picks, and the confirm button stays disabled until
-they do. Below the grid there are only the two buttons — no date readout. An
-optional `title` is drawn as a heading at the top, above the calendar.
+they do. Below the grid there are only the two buttons — no date readout, no
+title: the calendar is the whole sheet.
 
 ### Limiting the calendar: `startDate`, `endDate`, `durationDays`
 
@@ -250,7 +250,6 @@ await showNepaliCalendar(
   showSystemSwitch: true,                   // the BS/AD toggle in the header
   isDismissible: false,                     // default; true allows tap-outside
 
-  title: 'Delivery date',                   // optional heading, drawn at the top
   confirmLabel: 'Apply',
   cancelLabel: 'Back',
   maxWidth: 480,                            // caps the sheet on tablets
