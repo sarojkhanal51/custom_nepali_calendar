@@ -1,3 +1,14 @@
+## 3.1.0
+
+### Added
+
+* `holidays` marks specific days with a caller-chosen colour — pass an
+  organization's holiday list and each day in it is painted in its own colour
+  wherever it falls in the visible window. Each entry is a `NepaliHoliday`
+  (`type`, `dates`, `color`); `type` is free-form and carried through purely
+  for the caller's own bookkeeping. Taken by both `showNepaliCalendar` and
+  `HorizontalDateStrip`, which forwards it into the sheet its button opens.
+
 ## 3.0.0
 
 ### Breaking

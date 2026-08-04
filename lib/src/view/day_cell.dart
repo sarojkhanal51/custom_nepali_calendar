@@ -25,6 +25,7 @@ class CalendarDay {
     this.isRangeStart = false,
     this.isRangeEnd = false,
     this.isInRange = false,
+    this.holidayColor,
   });
 
   /// The day in Bikram Sambat.
@@ -54,6 +55,10 @@ class CalendarDay {
 
   /// Whether this day lies inside a completed range, ends included.
   final bool isInRange;
+
+  /// The color to paint the day number in, when this day is a caller-supplied
+  /// holiday. Null when the day is not a holiday.
+  final Color? holidayColor;
 
   /// The weekday index, `0` = Sunday … `6` = Saturday.
   int get weekdayIndex => bsDate.weekdayIndex;
@@ -222,6 +227,9 @@ class DayCell extends StatelessWidget {
     }
     if (day.isToday) {
       return theme.todayHighlightColor;
+    }
+    if (day.holidayColor != null) {
+      return day.holidayColor!;
     }
     if (day.isWeekend) {
       return theme.weekendColor;

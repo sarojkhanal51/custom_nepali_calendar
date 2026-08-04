@@ -34,6 +34,7 @@ export 'src/localization/calendar_strings.dart'
     show CalendarSystem, Language, NepaliNumerals;
 export 'src/models/nepali_date.dart';
 export 'src/models/nepali_date_range.dart';
+export 'src/models/nepali_holiday.dart';
 export 'src/sheet/nepali_calendar_sheet.dart'
     show
         NepaliCalendarMode,

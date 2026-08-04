@@ -36,6 +36,7 @@ List<CalendarDay?> buildMonthDays({
   NepaliDate? rangeEnd,
   NepaliDate? startDate,
   NepaliDate? endDate,
+  Map<NepaliDate, Color>? holidayColors,
 }) {
   final int firstDayNumber = system == CalendarSystem.bs
       ? DateConverter.bsToDayNumber(NepaliDate(year, month, 1))
@@ -83,6 +84,7 @@ List<CalendarDay?> buildMonthDays({
         isRangeStart: range != null && bsDate == range.start,
         isRangeEnd: range != null && bsDate == range.end,
         isInRange: range != null && range.contains(bsDate),
+        holidayColor: holidayColors?[bsDate],
       ),
     );
   }

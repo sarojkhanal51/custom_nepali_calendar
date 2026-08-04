@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 
 import '../converters/date_converter.dart';
 import '../data/bs_calendar_data.dart';
+import '../data/holiday_lookup.dart';
 import '../localization/calendar_strings.dart';
 import '../models/nepali_date.dart';
 import '../models/nepali_date_range.dart';
+import '../models/nepali_holiday.dart';
 import '../theme/nepali_calendar_theme.dart';
 import 'calendar_controller.dart';
 import 'calendar_header.dart';
@@ -26,6 +28,7 @@ class CalendarView extends StatefulWidget {
     required this.theme,
     this.allowedRange,
     this.showSystemSwitch = true,
+    this.holidays = const <NepaliHoliday>[],
     this.showAlternateDate = true,
     this.rowHeight = 48,
     super.key,
@@ -42,6 +45,9 @@ class CalendarView extends StatefulWidget {
 
   /// Whether the BS/AD switch is shown in the header.
   final bool showSystemSwitch;
+
+  /// Days painted in a caller-chosen color, e.g. an organization's holidays.
+  final List<NepaliHoliday> holidays;
 
   /// Whether each cell shows the other calendar's day number underneath.
   final bool showAlternateDate;
@@ -60,6 +66,9 @@ class _CalendarViewState extends State<CalendarView> {
   late _MonthPager _pager;
   late CalendarSystem _system;
   late final NepaliDate _today = DateConverter.todayBs();
+  late Map<NepaliDate, Color> _holidayColors = resolveHolidayColors(
+    widget.holidays,
+  );
 
   @override
   void initState() {
@@ -70,6 +79,14 @@ class _CalendarViewState extends State<CalendarView> {
       initialPage: _pager.pageOf(widget.controller.focusedDate),
     );
     widget.controller.addListener(_handleControllerUpdate);
+  }
+
+  @override
+  void didUpdateWidget(CalendarView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(widget.holidays, oldWidget.holidays)) {
+      _holidayColors = resolveHolidayColors(widget.holidays);
+    }
   }
 
   @override
@@ -246,6 +263,7 @@ class _CalendarViewState extends State<CalendarView> {
                   rangeEnd: controller.rangeEnd,
                   startDate: widget.allowedRange?.start,
                   endDate: widget.allowedRange?.end,
+                  holidayColors: _holidayColors,
                 ),
                 system: _system,
                 language: controller.language,

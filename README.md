@@ -7,7 +7,7 @@ and gets the picked value back.
 Written from scratch — **no third-party dependencies**, no platform channels, no
 native code. Pure Dart and the Flutter SDK, so it runs anywhere Flutter runs.
 
-<img src="doc/screenshots/range_sheet.png" width="280" alt="Range picker open in a bottom sheet, in Nepali">
+<img src="doc/screenshots/single_sheet.png" width="200" alt="Single-date picker open in a bottom sheet"> <img src="doc/screenshots/range_sheet.png" width="200" alt="Range picker open in a bottom sheet"> <img src="doc/screenshots/single_center.png" width="200" alt="Single-date picker open as a centred dialog"> <img src="doc/screenshots/range_center.png" width="200" alt="Range picker open as a centred dialog">
 
 ## Features
 
@@ -24,6 +24,7 @@ Everything below is in the code — nothing aspirational.
 - ✅ Month swipe and previous/next arrows
 - ✅ Selectable window via `startDate` with `endDate` or `durationDays`
 - ✅ `HorizontalDateStrip`: an inline row of days with the calendar one tap away
+- ✅ `holidays`: mark caller-supplied dates in their own colour, sheet and strip alike
 - ✅ Custom Cancel/Done labels
 
 **Nepali calendar**
@@ -140,6 +141,8 @@ mode. The centred one drops the drag handle, since there is no drag to hint at.
 For a row that lives on the screen rather than a sheet — today and the next few
 days, with the full calendar one tap away:
 
+<img src="doc/screenshots/horizontal_strip.png" width="480" alt="HorizontalDateStrip: an inline row of days, with the full calendar one tap away">
+
 ```dart
 HorizontalDateStrip(
   theme: NepaliCalendarTheme.fromTheme(Theme.of(context)),
@@ -169,6 +172,7 @@ what you hold never disagree.
 | `endDate` / `durationDays` | `null` | where the window closes — at most one |
 | `language` | `.english` | |
 | `system` | `.bs` | the chips show that calendar only |
+| `holidays` | `[]` | dates painted in their own colour, also passed to the calendar it opens |
 | `showCalendarButton` | `true` | the trailing button |
 | `height` | `60` | chips scale to fit |
 
@@ -230,6 +234,36 @@ await showNepaliCalendar(
   the window.
 * Holding Gregorian dates? `NepaliDate.fromDateTime(myDateTime)`.
 
+### Marking holidays
+
+Pass an organization's holiday list and each date in it is painted in its own
+colour, wherever it falls in the visible window:
+
+```dart
+await showNepaliCalendar(
+  context: context,
+  theme: myTheme,
+  startDate: NepaliDate.now(),
+  holidays: <NepaliHoliday>[
+    NepaliHoliday(
+      type: 'Public',
+      dates: <NepaliDate>[const NepaliDate(2083, 1, 1)],   // Nepali New Year
+      color: const Color(0xFFC1272D),
+    ),
+    NepaliHoliday(
+      type: 'Optional',
+      dates: <NepaliDate>[const NepaliDate(2083, 2, 15)],
+      color: const Color(0xFF0B7285),
+    ),
+  ],
+);
+```
+
+`type` is free-form — the package never reads it, so any scheme you already use
+carries straight through. `HorizontalDateStrip` takes the same `holidays`
+parameter and forwards it to the calendar its button opens, so the strip and
+the sheet always agree.
+
 ### All parameters
 
 ```dart
@@ -248,6 +282,7 @@ await showNepaliCalendar(
   initialSystem: CalendarSystem.bs,         // or CalendarSystem.ad
 
   showSystemSwitch: true,                   // the BS/AD toggle in the header
+  holidays: <NepaliHoliday>[...],           // dates painted in their own colour
   isDismissible: false,                     // default; true allows tap-outside
 
   confirmLabel: 'Apply',

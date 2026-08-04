@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../localization/calendar_strings.dart';
 import '../models/nepali_date.dart';
 import '../models/nepali_date_range.dart';
+import '../models/nepali_holiday.dart';
 import '../theme/nepali_calendar_theme.dart';
 import '../view/calendar_controller.dart';
 import '../view/calendar_view.dart';
@@ -143,6 +144,9 @@ class NepaliCalendarSelection {
 ///   calendar the sheet opens in. The user can switch Bikram Sambat/Gregorian
 ///   from the header unless [showSystemSwitch] is false; the language is fixed by
 ///   the caller and is not switchable in the sheet.
+/// * [holidays] marks specific days with a caller-chosen color — pass an
+///   organization's holiday list and each day in it is painted in its
+///   [NepaliHoliday.color] wherever it falls in the visible window.
 /// * [confirmLabel] and [cancelLabel] override the button text.
 /// * [isDismissible] defaults to `false`, so a stray tap on the barrier cannot
 ///   throw away a half-finished range. Set it to `true` for a sheet the user can
@@ -159,6 +163,7 @@ Future<NepaliCalendarSelection?> showNepaliCalendar({
   NepaliDate? endDate,
   int? durationDays,
   bool showSystemSwitch = true,
+  List<NepaliHoliday> holidays = const <NepaliHoliday>[],
   bool isDismissible = false,
   String? confirmLabel,
   String? cancelLabel,
@@ -187,6 +192,7 @@ Future<NepaliCalendarSelection?> showNepaliCalendar({
       durationDays: durationDays,
     ),
     showSystemSwitch: showSystemSwitch,
+    holidays: holidays,
     showDragHandle: !presentation.isCentered,
     confirmLabel: confirmLabel,
     cancelLabel: cancelLabel,
@@ -235,6 +241,7 @@ class _CalendarSheet extends StatefulWidget {
     required this.initialSystem,
     required this.allowedRange,
     required this.showSystemSwitch,
+    required this.holidays,
     required this.showDragHandle,
     required this.confirmLabel,
     required this.cancelLabel,
@@ -246,6 +253,7 @@ class _CalendarSheet extends StatefulWidget {
   final CalendarSystem initialSystem;
   final NepaliDateRange? allowedRange;
   final bool showSystemSwitch;
+  final List<NepaliHoliday> holidays;
   final bool showDragHandle;
   final String? confirmLabel;
   final String? cancelLabel;
@@ -308,6 +316,7 @@ class _CalendarSheetState extends State<_CalendarSheet> {
             theme: theme,
             allowedRange: widget.allowedRange,
             showSystemSwitch: widget.showSystemSwitch,
+            holidays: widget.holidays,
           ),
           ListenableBuilder(
             listenable: _controller,

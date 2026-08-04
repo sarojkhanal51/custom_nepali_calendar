@@ -4,9 +4,11 @@ library;
 import 'package:flutter/material.dart';
 
 import '../converters/date_converter.dart';
+import '../data/holiday_lookup.dart';
 import '../localization/calendar_strings.dart';
 import '../models/nepali_date.dart';
 import '../models/nepali_date_range.dart';
+import '../models/nepali_holiday.dart';
 import '../sheet/calendar_window.dart';
 import '../sheet/nepali_calendar_sheet.dart';
 import '../theme/nepali_calendar_theme.dart';
@@ -41,6 +43,7 @@ class HorizontalDateStrip extends StatefulWidget {
     this.durationDays,
     this.language = Language.english,
     this.system = CalendarSystem.bs,
+    this.holidays = const <NepaliHoliday>[],
     this.showCalendarButton = true,
     this.presentation = NepaliCalendarPresentation.bottomSheet,
     this.height = 60,
@@ -88,6 +91,11 @@ class HorizontalDateStrip extends StatefulWidget {
   /// [CalendarSystem.bs], the Gregorian one under [CalendarSystem.ad].
   final CalendarSystem system;
 
+  /// Days painted in a caller-chosen color, e.g. an organization's holidays.
+  ///
+  /// Applied to both the strip's chips and the full calendar opened from it.
+  final List<NepaliHoliday> holidays;
+
   /// Whether to show the trailing button that opens the full calendar.
   final bool showCalendarButton;
 
@@ -109,6 +117,10 @@ class _HorizontalDateStripState extends State<HorizontalDateStrip> {
 
   /// Today, once it has been reported, so the default fires only on first build.
   NepaliDate? _defaultedTo;
+
+  late Map<NepaliDate, Color> _holidayColors = resolveHolidayColors(
+    widget.holidays,
+  );
 
   @override
   void initState() {
@@ -147,6 +159,9 @@ class _HorizontalDateStripState extends State<HorizontalDateStrip> {
     if (widget.startDate != oldWidget.startDate) {
       _anchor = widget.startDate;
     }
+    if (!identical(widget.holidays, oldWidget.holidays)) {
+      _holidayColors = resolveHolidayColors(widget.holidays);
+    }
     _reAnchorIfSelectionIsOffStrip();
   }
 
@@ -182,6 +197,7 @@ class _HorizontalDateStripState extends State<HorizontalDateStrip> {
       startDate: widget.startDate,
       endDate: widget.endDate,
       durationDays: widget.durationDays,
+      holidays: widget.holidays,
     );
     final NepaliDate? picked = selection?.date;
     if (picked == null) {
@@ -216,6 +232,7 @@ class _HorizontalDateStripState extends State<HorizontalDateStrip> {
                 isSelected: day == _effectiveSelection,
                 isToday: day == today,
                 isDisabled: !window.contains(day),
+                holidayColor: _holidayColors[day],
                 onTap: () => widget.onDateSelected(day),
               ),
             ),
@@ -236,6 +253,7 @@ class _DayChip extends StatelessWidget {
     required this.isSelected,
     required this.isToday,
     required this.isDisabled,
+    this.holidayColor,
     required this.onTap,
   });
 
@@ -246,6 +264,7 @@ class _DayChip extends StatelessWidget {
   final bool isSelected;
   final bool isToday;
   final bool isDisabled;
+  final Color? holidayColor;
   final VoidCallback onTap;
 
   /// The month this day belongs to, abbreviated for Latin script only —
@@ -262,6 +281,8 @@ class _DayChip extends StatelessWidget {
       ? theme.selectedDayTextColor.withValues(alpha: 0.85)
       : isDisabled
       ? theme.disabledDayColor
+      : holidayColor != null
+      ? holidayColor!
       : date.isSaturday
       ? theme.weekendColor
       : theme.weekdayHeaderColor;
@@ -275,6 +296,8 @@ class _DayChip extends StatelessWidget {
         ? theme.selectedDayTextColor
         : isDisabled
         ? theme.disabledDayColor
+        : holidayColor != null
+        ? holidayColor!
         : date.isSaturday
         ? theme.weekendColor
         : theme.textColor;

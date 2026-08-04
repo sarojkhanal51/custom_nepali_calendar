@@ -49,6 +49,21 @@ class _DemoScreenState extends State<DemoScreen> {
   Language _language = Language.english;
   NepaliDate? _stripDate;
 
+  /// A couple of sample holidays, placed relative to today so they always
+  /// land inside the 90-day window the demo offers.
+  late final List<NepaliHoliday> _holidays = <NepaliHoliday>[
+    NepaliHoliday(
+      type: 'Public',
+      dates: <NepaliDate>[NepaliDate.now().addDays(5)],
+      color: const Color(0xFFC1272D),
+    ),
+    NepaliHoliday(
+      type: 'Optional',
+      dates: <NepaliDate>[NepaliDate.now().addDays(20)],
+      color: const Color(0xFF2F9E44),
+    ),
+  ];
+
   Future<void> _pickDate() async {
     final NepaliCalendarSelection? selection = await showNepaliCalendar(
       context: context,
@@ -57,6 +72,7 @@ class _DemoScreenState extends State<DemoScreen> {
       // Today, and the ninety days after it.
       startDate: NepaliDate.now(),
       durationDays: 90,
+      holidays: _holidays,
     );
 
     setState(() {
@@ -81,6 +97,7 @@ class _DemoScreenState extends State<DemoScreen> {
       // The window the calendar offers: today plus the next 89 days.
       startDate: NepaliDate.now(),
       durationDays: 90,
+      holidays: _holidays,
     );
 
     setState(() {
@@ -142,6 +159,7 @@ class _DemoScreenState extends State<DemoScreen> {
                   language: _language,
                   startDate: NepaliDate.now(),
                   durationDays: 60,
+                  holidays: _holidays,
                   selectedDate: _stripDate,
                   onDateSelected: (NepaliDate date) => setState(() {
                     _stripDate = date;

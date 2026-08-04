@@ -3,7 +3,7 @@ description: >-
   Nepali Bikram Sambat calendar and date picker in a bottom sheet: single date
   or range, custom theme colours, live BS/AD switch, Nepali or English. No
   dependencies.
-version: 3.0.0
+version: 3.1.0
 repository: https://github.com/sarojkhanal51/custom_nepali_calendar
 issue_tracker: https://github.com/sarojkhanal51/custom_nepali_calendar/issues
 
@@ -18,9 +18,21 @@ topics:
 # Rendered as a gallery on the package page.
 screenshots:
   - description: >-
-      The range picker open in a bottom sheet, in Nepali, with the days between
-      the two ends banded and dates outside the allowed window greyed out.
+      Single-date picker open in a bottom sheet.
+    path: doc/screenshots/single_sheet.png
+  - description: >-
+      Range picker open in a bottom sheet.
     path: doc/screenshots/range_sheet.png
+  - description: >-
+      Single-date picker open as a centred dialog.
+    path: doc/screenshots/single_center.png
+  - description: >-
+      Range picker open as a centred dialog.
+    path: doc/screenshots/range_center.png
+  - description: >-
+      HorizontalDateStrip: an inline row of days, with the full calendar one
+      tap away.
+    path: doc/screenshots/horizontal_strip.png
 
 environment:
   sdk: ^3.10.0
