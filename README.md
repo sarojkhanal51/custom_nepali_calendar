@@ -7,7 +7,7 @@ and gets the picked value back.
 Written from scratch — **no third-party dependencies**, no platform channels, no
 native code. Pure Dart and the Flutter SDK, so it runs anywhere Flutter runs.
 
-<img src="doc/screenshots/single_sheet.png" width="200" alt="Single-date picker open in a bottom sheet"> <img src="doc/screenshots/range_sheet.png" width="200" alt="Range picker open in a bottom sheet"> <img src="doc/screenshots/single_center.png" width="200" alt="Single-date picker open as a centred dialog"> <img src="doc/screenshots/range_center.png" width="200" alt="Range picker open as a centred dialog">
+<img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/v3.1.1/doc/screenshots/single_sheet.png" width="200" alt="Single-date picker open in a bottom sheet"> <img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/v3.1.1/doc/screenshots/range_sheet.png" width="200" alt="Range picker open in a bottom sheet"> <img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/v3.1.1/doc/screenshots/single_center.png" width="200" alt="Single-date picker open as a centred dialog"> <img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/v3.1.1/doc/screenshots/range_center.png" width="200" alt="Range picker open as a centred dialog">
 
 ## Features
 
@@ -141,7 +141,7 @@ mode. The centred one drops the drag handle, since there is no drag to hint at.
 For a row that lives on the screen rather than a sheet — today and the next few
 days, with the full calendar one tap away:
 
-<img src="doc/screenshots/horizontal_strip.png" width="480" alt="HorizontalDateStrip: an inline row of days, with the full calendar one tap away">
+<img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/v3.1.1/doc/screenshots/horizontal_strip.png" width="480" alt="HorizontalDateStrip: an inline row of days, with the full calendar one tap away">
 
 ```dart
 HorizontalDateStrip(

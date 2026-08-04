@@ -1,3 +1,12 @@
+## 3.1.1
+
+### Fixed
+
+* **Docs:** README screenshots pointed at relative `doc/screenshots/*.png`
+  paths, which pub.dev's README renderer cannot resolve — it silently drops
+  the image and leaves the alt text instead. They now point at absolute
+  `raw.githubusercontent.com` URLs pinned to this release's tag.
+
 ## 3.1.0
 
 ### Added
