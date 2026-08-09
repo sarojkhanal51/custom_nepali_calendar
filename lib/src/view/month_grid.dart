@@ -73,6 +73,7 @@ List<CalendarDay?> buildMonthDays({
       CalendarDay(
         bsDate: bsDate,
         adDate: adDate,
+        weekdayIndex: GregorianCalendar.dayNumberToWeekdayIndex(dayNumber),
         isCurrentMonth: system == CalendarSystem.bs
             ? bsDate.year == year && bsDate.month == month
             : adDate.year == year && adDate.month == month,

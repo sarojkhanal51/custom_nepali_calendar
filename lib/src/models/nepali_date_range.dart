@@ -4,6 +4,8 @@ library;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' show DateTimeRange;
 
+import '../converters/date_conversion_exception.dart';
+import '../data/bs_calendar_data.dart';
 import 'nepali_date.dart';
 
 /// An inclusive range of Bikram Sambat days, `start` through `end`.
@@ -67,13 +69,41 @@ class NepaliDateRange {
   /// Every day in the range, in order.
   ///
   /// Materializes one [NepaliDate] per day, so prefer [contains] for membership
-  /// tests over long spans.
+  /// tests over long spans. Empty when [start] is after [end].
+  ///
+  /// Walks Bikram Sambat year/month/day directly rather than repeatedly
+  /// converting through the Gregorian calendar, so this stays cheap even for
+  /// a multi-year range.
   List<NepaliDate> get days {
+    if (start > end) {
+      return const <NepaliDate>[];
+    }
     final List<NepaliDate> result = <NepaliDate>[];
-    NepaliDate cursor = start;
-    while (cursor <= end) {
+    int year = start.year;
+    int month = start.month;
+    int day = start.day;
+    while (true) {
+      final NepaliDate cursor = NepaliDate(year, month, day);
       result.add(cursor);
-      cursor = cursor.addDays(1);
+      if (cursor >= end) {
+        break;
+      }
+      day++;
+      if (day > BsCalendarData.daysInMonth(year, month)) {
+        day = 1;
+        month++;
+        if (month > BsCalendarData.monthsPerYear) {
+          month = 1;
+          year++;
+        }
+        if (!BsCalendarData.isSupportedYear(year)) {
+          throw DateConversionException.outOfRange(
+            date: '$year-${month.toString().padLeft(2, '0')}',
+            supportedFrom: BsCalendarData.minYear,
+            supportedTo: BsCalendarData.maxYear,
+          );
+        }
+      }
     }
     return result;
   }

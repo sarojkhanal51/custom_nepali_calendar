@@ -20,7 +20,21 @@ NepaliDateRange resolveCalendarWindow({
   int? durationDays,
 }) {
   if (endDate != null) {
+    if (endDate < startDate) {
+      throw ArgumentError.value(
+        endDate,
+        'endDate',
+        'must not be before startDate ($startDate)',
+      );
+    }
     return NepaliDateRange(start: startDate, end: endDate);
+  }
+  if (durationDays != null && durationDays <= 0) {
+    throw ArgumentError.value(
+      durationDays,
+      'durationDays',
+      'must be greater than zero',
+    );
   }
   if (durationDays == null) {
     return NepaliDateRange(start: startDate, end: NepaliDate.max);

@@ -1,6 +1,7 @@
 /// The month view rendered inside the sheet.
 library;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../converters/date_converter.dart';
@@ -11,6 +12,7 @@ import '../models/nepali_date.dart';
 import '../models/nepali_date_range.dart';
 import '../models/nepali_holiday.dart';
 import '../theme/nepali_calendar_theme.dart';
+import '../util/today_cache.dart';
 import 'calendar_controller.dart';
 import 'calendar_header.dart';
 import 'day_cell.dart';
@@ -65,56 +67,105 @@ class _CalendarViewState extends State<CalendarView> {
   late PageController _pageController;
   late _MonthPager _pager;
   late CalendarSystem _system;
-  late final NepaliDate _today = DateConverter.todayBs();
+  final TodayCache _todayCache = TodayCache();
   late Map<NepaliDate, Color> _holidayColors = resolveHolidayColors(
     widget.holidays,
   );
+  final Map<_MonthDaysKey, List<CalendarDay?>> _monthDaysCache =
+      <_MonthDaysKey, List<CalendarDay?>>{};
+
+  // Tracked so a controller notification only triggers a rebuild when
+  // something this view actually renders has changed — a month swipe
+  // notifies too, but neither the selection nor the system moved.
+  NepaliDate? _lastSelectedDate;
+  NepaliDate? _lastRangeStart;
+  NepaliDate? _lastRangeEnd;
+
+  late final ValueNotifier<int> _currentPage;
 
   @override
   void initState() {
     super.initState();
     _system = widget.controller.system;
+    _lastSelectedDate = widget.controller.selectedDate;
+    _lastRangeStart = widget.controller.rangeStart;
+    _lastRangeEnd = widget.controller.rangeEnd;
     _pager = _buildPager();
     _pageController = PageController(
       initialPage: _pager.pageOf(widget.controller.focusedDate),
     );
+    _currentPage = ValueNotifier<int>(
+      _pager.pageOf(widget.controller.focusedDate),
+    );
+    _pageController.addListener(_onScroll);
     widget.controller.addListener(_handleControllerUpdate);
   }
 
   @override
   void didUpdateWidget(CalendarView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!identical(widget.holidays, oldWidget.holidays)) {
+    if (!listEquals(widget.holidays, oldWidget.holidays)) {
       _holidayColors = resolveHolidayColors(widget.holidays);
+      _monthDaysCache.clear();
     }
   }
 
   @override
   void dispose() {
     widget.controller.removeListener(_handleControllerUpdate);
+    _pageController.removeListener(_onScroll);
     _pageController.dispose();
+    _currentPage.dispose();
     super.dispose();
+  }
+
+  /// Mirrors the settled page into [_currentPage], so the header only
+  /// recomputes on a real page change rather than on every scroll frame.
+  void _onScroll() {
+    if (!_pageController.hasClients) {
+      return;
+    }
+    final int page =
+        _pageController.page?.round() ?? _pageController.initialPage;
+    if (page != _currentPage.value) {
+      _currentPage.value = page;
+    }
   }
 
   void _handleControllerUpdate() {
     if (!mounted) {
       return;
     }
-    final CalendarSystem system = widget.controller.system;
+    final CalendarController controller = widget.controller;
+    final CalendarSystem system = controller.system;
     final bool systemChanged = system != _system;
-    setState(() {
-      _system = system;
-      if (systemChanged) {
-        // Page indices mean different months in each system, so the pager and
-        // its controller are rebuilt around the month currently in view.
-        _pager = _buildPager();
-        final PageController old = _pageController;
-        _pageController = PageController(
-          initialPage: _pager.pageOf(widget.controller.focusedDate),
-        );
-        WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
-      }
-    });
+    final bool selectionChanged =
+        controller.selectedDate != _lastSelectedDate ||
+        controller.rangeStart != _lastRangeStart ||
+        controller.rangeEnd != _lastRangeEnd;
+    _lastSelectedDate = controller.selectedDate;
+    _lastRangeStart = controller.rangeStart;
+    _lastRangeEnd = controller.rangeEnd;
+
+    if (systemChanged || selectionChanged) {
+      setState(() {
+        _system = system;
+        if (systemChanged) {
+          // Page indices mean different months in each system, so the pager
+          // and its controller are rebuilt around the month currently in
+          // view.
+          _pager = _buildPager();
+          final PageController old = _pageController;
+          old.removeListener(_onScroll);
+          _pageController = PageController(
+            initialPage: _pager.pageOf(controller.focusedDate),
+          );
+          _pageController.addListener(_onScroll);
+          _currentPage.value = _pager.pageOf(controller.focusedDate);
+          WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
+        }
+      });
+    }
     if (!systemChanged) {
       _syncPageToFocusedMonth();
     }
@@ -214,12 +265,9 @@ class _CalendarViewState extends State<CalendarView> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        ListenableBuilder(
-          listenable: _pageController,
-          builder: (BuildContext context, Widget? child) {
-            final int page = _pageController.hasClients
-                ? (_pageController.page?.round() ?? _pageController.initialPage)
-                : _pageController.initialPage;
+        ValueListenableBuilder<int>(
+          valueListenable: _currentPage,
+          builder: (BuildContext context, int page, Widget? child) {
             final _MonthRef ref = _pager.monthRefOf(page);
             return CalendarHeader(
               title: _title(ref),
@@ -233,7 +281,7 @@ class _CalendarViewState extends State<CalendarView> {
               onNext: () => _movePage(1),
               onSystemChanged: controller.setSystem,
               onToday: () {
-                if (_pager.contains(DateConverter.todayBs())) {
+                if (_pager.contains(_todayCache.today)) {
                   controller.goToToday();
                 }
               },
@@ -251,12 +299,25 @@ class _CalendarViewState extends State<CalendarView> {
                 controller.showMonthOf(_pager.monthStartOf(page)),
             itemBuilder: (BuildContext context, int page) {
               final _MonthRef ref = _pager.monthRefOf(page);
-              return MonthGrid(
-                days: buildMonthDays(
+              final NepaliDate today = _todayCache.today;
+              final _MonthDaysKey key = _MonthDaysKey(
+                year: ref.year,
+                month: ref.month,
+                system: _system,
+                today: today,
+                selectedDate: controller.selectedDate,
+                rangeStart: controller.rangeStart,
+                rangeEnd: controller.rangeEnd,
+                startDate: widget.allowedRange?.start,
+                endDate: widget.allowedRange?.end,
+              );
+              final List<CalendarDay?> days = _monthDaysCache.putIfAbsent(
+                key,
+                () => buildMonthDays(
                   year: ref.year,
                   month: ref.month,
                   system: _system,
-                  today: _today,
+                  today: today,
                   weekCount: _weekRows,
                   selectedDate: controller.selectedDate,
                   rangeStart: controller.rangeStart,
@@ -265,6 +326,9 @@ class _CalendarViewState extends State<CalendarView> {
                   endDate: widget.allowedRange?.end,
                   holidayColors: _holidayColors,
                 ),
+              );
+              return MonthGrid(
+                days: days,
                 system: _system,
                 language: controller.language,
                 theme: widget.theme,
@@ -311,6 +375,59 @@ class _MonthRef {
 
   @override
   int get hashCode => Object.hash(year, month);
+}
+
+/// Everything one call to [buildMonthDays] depends on, so a page's cells can
+/// be reused across rebuilds that don't actually change any of them.
+@immutable
+class _MonthDaysKey {
+  const _MonthDaysKey({
+    required this.year,
+    required this.month,
+    required this.system,
+    required this.today,
+    required this.selectedDate,
+    required this.rangeStart,
+    required this.rangeEnd,
+    required this.startDate,
+    required this.endDate,
+  });
+
+  final int year;
+  final int month;
+  final CalendarSystem system;
+  final NepaliDate today;
+  final NepaliDate? selectedDate;
+  final NepaliDate? rangeStart;
+  final NepaliDate? rangeEnd;
+  final NepaliDate? startDate;
+  final NepaliDate? endDate;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _MonthDaysKey &&
+      other.year == year &&
+      other.month == month &&
+      other.system == system &&
+      other.today == today &&
+      other.selectedDate == selectedDate &&
+      other.rangeStart == rangeStart &&
+      other.rangeEnd == rangeEnd &&
+      other.startDate == startDate &&
+      other.endDate == endDate;
+
+  @override
+  int get hashCode => Object.hash(
+    year,
+    month,
+    system,
+    today,
+    selectedDate,
+    rangeStart,
+    rangeEnd,
+    startDate,
+    endDate,
+  );
 }
 
 /// Maps [PageView] indices to calendar months for the active system.

@@ -48,6 +48,22 @@ void main() {
       expect(crossYear.contains(const NepaliDate(2081, 12, 31)), isTrue);
       expect(crossYear.contains(const NepaliDate(2082, 1, 1)), isTrue);
     });
+
+    test('a single day at the very top of the supported range does not throw', () {
+      final NepaliDateRange atMax = NepaliDateRange(
+        start: NepaliDate.max,
+        end: NepaliDate.max,
+      );
+      expect(atMax.days, <NepaliDate>[NepaliDate.max]);
+    });
+
+    test('a reversed range has no days', () {
+      const NepaliDateRange reversed = NepaliDateRange(
+        start: NepaliDate(2081, 1, 20),
+        end: NepaliDate(2081, 1, 15),
+      );
+      expect(reversed.days, isEmpty);
+    });
   });
 
   group('validity and normalization', () {

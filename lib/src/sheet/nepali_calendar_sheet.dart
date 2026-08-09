@@ -173,14 +173,6 @@ Future<NepaliCalendarSelection?> showNepaliCalendar({
     endDate == null || durationDays == null,
     'Give the window an endDate or a durationDays, not both.',
   );
-  assert(
-    endDate == null || startDate <= endDate,
-    'endDate must not be before startDate.',
-  );
-  assert(
-    durationDays == null || durationDays > 0,
-    'durationDays must be greater than zero.',
-  );
   final Widget body = _CalendarSheet(
     mode: mode,
     theme: theme,

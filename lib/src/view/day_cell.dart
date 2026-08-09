@@ -18,6 +18,7 @@ class CalendarDay {
   const CalendarDay({
     required this.bsDate,
     required this.adDate,
+    required this.weekdayIndex,
     required this.isCurrentMonth,
     required this.isToday,
     required this.isSelected,
@@ -33,6 +34,13 @@ class CalendarDay {
 
   /// The same day in the Gregorian calendar.
   final DateTime adDate;
+
+  /// The weekday index, `0` = Sunday … `6` = Saturday.
+  ///
+  /// Passed in by the grid builder, which already derives it from the same
+  /// day number used to compute [bsDate] and [adDate], rather than
+  /// recomputed here from [bsDate].
+  final int weekdayIndex;
 
   /// Whether this day belongs to the month on screen, as opposed to being a
   /// leading/trailing day borrowed from a neighbouring month.
@@ -59,9 +67,6 @@ class CalendarDay {
   /// The color to paint the day number in, when this day is a caller-supplied
   /// holiday. Null when the day is not a holiday.
   final Color? holidayColor;
-
-  /// The weekday index, `0` = Sunday … `6` = Saturday.
-  int get weekdayIndex => bsDate.weekdayIndex;
 
   /// Whether this day is a Saturday — the Nepali weekend.
   bool get isWeekend => weekdayIndex == 6;

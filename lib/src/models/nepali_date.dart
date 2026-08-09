@@ -119,8 +119,11 @@ class NepaliDate implements Comparable<NepaliDate> {
   ///
   /// Throws a [DateConversionException] when the result leaves the supported
   /// range.
-  NepaliDate addDays(int days) =>
-      DateConverter.adToBs(GregorianCalendar.addDays(toDateTime(), days));
+  NepaliDate addDays(int days) {
+    final int dayNumber = DateConverter.bsToDayNumber(this) + days;
+    final List<int> parts = GregorianCalendar.fromDayNumber(dayNumber);
+    return DateConverter.adToBs(DateTime(parts[0], parts[1], parts[2]));
+  }
 
   /// This date shifted by [days] backwards.
   ///

@@ -1,9 +1,12 @@
 /// An inline row of days, with the full calendar one tap away.
 library;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../converters/date_conversion_exception.dart';
 import '../converters/date_converter.dart';
+import '../data/bs_calendar_data.dart';
 import '../data/holiday_lookup.dart';
 import '../localization/calendar_strings.dart';
 import '../models/nepali_date.dart';
@@ -159,7 +162,7 @@ class _HorizontalDateStripState extends State<HorizontalDateStrip> {
     if (widget.startDate != oldWidget.startDate) {
       _anchor = widget.startDate;
     }
-    if (!identical(widget.holidays, oldWidget.holidays)) {
+    if (!listEquals(widget.holidays, oldWidget.holidays)) {
       _holidayColors = resolveHolidayColors(widget.holidays);
     }
     _reAnchorIfSelectionIsOffStrip();
@@ -177,9 +180,38 @@ class _HorizontalDateStripState extends State<HorizontalDateStrip> {
     }
   }
 
-  List<NepaliDate> get _days => <NepaliDate>[
-    for (int i = 0; i < widget.dayCount; i++) _anchor.addDays(i),
-  ];
+  /// The strip's days, walked directly in Bikram Sambat rather than through
+  /// repeated Gregorian round-trips — this scales with [widget.dayCount] and
+  /// runs on every build.
+  List<NepaliDate> get _days {
+    final List<NepaliDate> result = <NepaliDate>[];
+    int year = _anchor.year;
+    int month = _anchor.month;
+    int day = _anchor.day;
+    for (int i = 0; i < widget.dayCount; i++) {
+      result.add(NepaliDate(year, month, day));
+      if (i == widget.dayCount - 1) {
+        break;
+      }
+      day++;
+      if (day > BsCalendarData.daysInMonth(year, month)) {
+        day = 1;
+        month++;
+        if (month > BsCalendarData.monthsPerYear) {
+          month = 1;
+          year++;
+        }
+        if (!BsCalendarData.isSupportedYear(year)) {
+          throw DateConversionException.outOfRange(
+            date: '$year-${month.toString().padLeft(2, '0')}',
+            supportedFrom: BsCalendarData.minYear,
+            supportedTo: BsCalendarData.maxYear,
+          );
+        }
+      }
+    }
+    return result;
+  }
 
   NepaliDateRange get _window => resolveCalendarWindow(
     startDate: widget.startDate,

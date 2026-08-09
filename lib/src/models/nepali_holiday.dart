@@ -2,6 +2,7 @@
 /// color it should paint those days.
 library;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'nepali_date.dart';
@@ -43,4 +44,15 @@ class NepaliHoliday {
 
   @override
   String toString() => 'NepaliHoliday($type, ${dates.length} date(s))';
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is NepaliHoliday &&
+          other.type == type &&
+          other.color == color &&
+          listEquals(other.dates, dates));
+
+  @override
+  int get hashCode => Object.hash(type, color, Object.hashAll(dates));
 }
