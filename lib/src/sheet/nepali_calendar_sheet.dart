@@ -39,26 +39,45 @@ enum NepaliCalendarPresentation {
 /// What the user picked, returned by [showNepaliCalendar].
 ///
 /// Exactly one of [date] and [range] is set, matching the [NepaliCalendarMode]
-/// the sheet was opened with:
+/// the sheet was opened with — except [isCleared], where both are null:
 ///
 /// ```dart
 /// final selection = await showNepaliCalendar(context: context);
 /// selection?.date;   // set when opened in single mode
 /// selection?.range;  // set when opened in range mode
+/// selection?.isCleared;  // true when the Clear button was pressed instead
 /// ```
 @immutable
 class NepaliCalendarSelection {
   /// A single-day result.
-  const NepaliCalendarSelection.single(NepaliDate this.date) : range = null;
+  const NepaliCalendarSelection.single(NepaliDate this.date)
+    : range = null,
+      isCleared = false;
 
   /// A range result.
-  const NepaliCalendarSelection.range(NepaliDateRange this.range) : date = null;
+  const NepaliCalendarSelection.range(NepaliDateRange this.range)
+    : date = null,
+      isCleared = false;
+
+  /// The result of pressing Clear — [date] and [range] are both null.
+  ///
+  /// Distinct from the sheet resolving to plain `null` (the user backed out
+  /// via Cancel/dismiss, meaning "leave whatever I already had alone"):
+  /// this means the user explicitly asked for the value to be removed, so a
+  /// caller holding a previous selection should clear it too.
+  const NepaliCalendarSelection.cleared()
+    : date = null,
+      range = null,
+      isCleared = true;
 
   /// The picked day, set only in [NepaliCalendarMode.single].
   final NepaliDate? date;
 
   /// The picked range, set only in [NepaliCalendarMode.range].
   final NepaliDateRange? range;
+
+  /// Whether this came from the Clear button rather than a pick.
+  final bool isCleared;
 
   /// The mode this selection came from.
   NepaliCalendarMode get mode =>
@@ -71,16 +90,19 @@ class NepaliCalendarSelection {
   DateTimeRange? get dateTimeRange => range?.toDateTimeRange();
 
   @override
-  String toString() => 'NepaliCalendarSelection(${date ?? range})';
+  String toString() => isCleared
+      ? 'NepaliCalendarSelection.cleared()'
+      : 'NepaliCalendarSelection(${date ?? range})';
 
   @override
   bool operator ==(Object other) =>
       other is NepaliCalendarSelection &&
       other.date == date &&
-      other.range == range;
+      other.range == range &&
+      other.isCleared == isCleared;
 
   @override
-  int get hashCode => Object.hash(date, range);
+  int get hashCode => Object.hash(date, range, isCleared);
 }
 
 /// Opens the Nepali calendar in a modal bottom sheet and returns what was picked.
@@ -127,9 +149,9 @@ class NepaliCalendarSelection {
 ///   thing to pass. For a sheet that follows the host app — including its light
 ///   or dark mode — pass `NepaliCalendarTheme.fromTheme(Theme.of(context))`;
 ///   for a fixed dark look, `NepaliCalendarTheme.dark()`.
-/// * Nothing is preselected. The sheet opens on [allowedRange]'s first month, or
-///   on the current month when unbounded, and confirm stays disabled until the
-///   user picks.
+/// * Nothing is preselected by default — see [initialSelection] to change
+///   that. The sheet opens on [startDate]'s month and confirm stays disabled
+///   until the user picks.
 /// * [startDate] is where the calendar opens and the earliest day it offers —
 ///   pass `NepaliDate.now()` for "from today", or `NepaliDate.min` to go back as
 ///   far as the package can.
@@ -147,7 +169,28 @@ class NepaliCalendarSelection {
 /// * [holidays] marks specific days with a caller-chosen color — pass an
 ///   organization's holiday list and each day in it is painted in its
 ///   [NepaliHoliday.color] wherever it falls in the visible window.
+/// * [selectableDates], when given, disables every day not in it — on top of
+///   whatever [startDate]/[endDate]/[durationDays] already restrict, not
+///   instead of it. Useful for e.g. a fixed set of available appointment
+///   slots. Null (the default) means no extra restriction.
 /// * [confirmLabel] and [cancelLabel] override the button text.
+/// * [showClearButton] allows a Clear button beside Cancel/Done — off by
+///   default, and even when `true` it only appears when the sheet opened on
+///   a value the caller already held, via [initialSelection]. Picking a day
+///   in this session does not reveal it — Cancel already covers "undo my
+///   in-progress pick"; Clear is specifically for removing a value from a
+///   previous session. Pressing it resolves to
+///   `const NepaliCalendarSelection.cleared()` rather than plain `null`, so a
+///   caller can tell "the user removed the value" apart from "the user backed
+///   out, leave it alone." [clearLabel] overrides its text.
+/// * [initialSelection] preselects the sheet with a value you already hold —
+///   typically whatever [showNepaliCalendar] returned last time. It must
+///   match [mode]: a `.single` selection's [NepaliCalendarSelection.date] is
+///   used in single mode, a `.range` selection's
+///   [NepaliCalendarSelection.range] in range mode; the other is ignored.
+///   The sheet also opens on the selection's month instead of [startDate]'s.
+///   Leave it `null` (the default) for the existing "nothing preselected"
+///   behavior.
 /// * [isDismissible] defaults to `false`, so a stray tap on the barrier cannot
 ///   throw away a half-finished range. Set it to `true` for a sheet the user can
 ///   flick away.
@@ -164,7 +207,11 @@ Future<NepaliCalendarSelection?> showNepaliCalendar({
   int? durationDays,
   bool showSystemSwitch = true,
   List<NepaliHoliday> holidays = const <NepaliHoliday>[],
+  List<NepaliDate>? selectableDates,
+  NepaliCalendarSelection? initialSelection,
   bool isDismissible = false,
+  bool showClearButton = false,
+  String? clearLabel,
   String? confirmLabel,
   String? cancelLabel,
   double maxWidth = 480,
@@ -185,7 +232,11 @@ Future<NepaliCalendarSelection?> showNepaliCalendar({
     ),
     showSystemSwitch: showSystemSwitch,
     holidays: holidays,
+    selectableDates: selectableDates,
+    initialSelection: initialSelection,
     showDragHandle: !presentation.isCentered,
+    showClearButton: showClearButton,
+    clearLabel: clearLabel,
     confirmLabel: confirmLabel,
     cancelLabel: cancelLabel,
   );
@@ -234,7 +285,11 @@ class _CalendarSheet extends StatefulWidget {
     required this.allowedRange,
     required this.showSystemSwitch,
     required this.holidays,
+    required this.selectableDates,
+    required this.initialSelection,
     required this.showDragHandle,
+    required this.showClearButton,
+    required this.clearLabel,
     required this.confirmLabel,
     required this.cancelLabel,
   });
@@ -246,7 +301,11 @@ class _CalendarSheet extends StatefulWidget {
   final NepaliDateRange? allowedRange;
   final bool showSystemSwitch;
   final List<NepaliHoliday> holidays;
+  final List<NepaliDate>? selectableDates;
+  final NepaliCalendarSelection? initialSelection;
   final bool showDragHandle;
+  final bool showClearButton;
+  final String? clearLabel;
   final String? confirmLabel;
   final String? cancelLabel;
 
@@ -255,11 +314,18 @@ class _CalendarSheet extends StatefulWidget {
 }
 
 class _CalendarSheetState extends State<_CalendarSheet> {
-  // Nothing is preselected: the sheet opens on the window's first month (or on
-  // today when unbounded) and the user picks from there.
+  // Nothing is preselected by default: the sheet opens on the window's first
+  // month (or today when unbounded) and the user picks from there. When
+  // widget.initialSelection is given, the sheet opens on its month instead
+  // and starts with it already selected.
   late final CalendarController _controller = CalendarController(
     mode: widget.mode,
-    focusedDate: widget.allowedRange?.start,
+    focusedDate:
+        widget.initialSelection?.date ??
+        widget.initialSelection?.range?.start ??
+        widget.allowedRange?.start,
+    initialDate: widget.initialSelection?.date,
+    initialRange: widget.initialSelection?.range,
     system: widget.initialSystem,
     language: widget.language,
   );
@@ -309,12 +375,31 @@ class _CalendarSheetState extends State<_CalendarSheet> {
             allowedRange: widget.allowedRange,
             showSystemSwitch: widget.showSystemSwitch,
             holidays: widget.holidays,
+            selectableDates: widget.selectableDates,
           ),
           ListenableBuilder(
             listenable: _controller,
             builder: (BuildContext context, Widget? child) {
               final NepaliCalendarSelection? result = _result;
               final bool nepali = _controller.language.isNepali;
+              // Only shown when the sheet opened on a value the caller
+              // already held (initialSelection) — not just because the user
+              // has tapped a day in this session. Clear means "remove what
+              // was there before", not "undo my in-progress pick" (Cancel
+              // already does that).
+              final bool hasInitialSelection =
+                  widget.initialSelection?.date != null ||
+                  widget.initialSelection?.range != null;
+              // Tinted red rather than neutral: unlike Cancel, Clear discards
+              // a value irreversibly, so it earns a touch of warning colour.
+              // Blended from the theme's own textColor rather than a flat
+              // hex, so it keeps reasonable contrast in both light and dark
+              // themes instead of one hard-coded shade fighting either.
+              final Color clearColor = Color.lerp(
+                theme.textColor,
+                const Color(0xFFD32F2F),
+                0.6,
+              )!;
               return Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                 child: Column(
@@ -322,6 +407,30 @@ class _CalendarSheetState extends State<_CalendarSheet> {
                   children: <Widget>[
                     Row(
                       children: <Widget>[
+                        if (widget.showClearButton &&
+                            hasInitialSelection) ...<Widget>[
+                          // Same shape and height as Cancel — just not
+                          // Expanded, so it reads as a compact tertiary
+                          // action beside the two full-width primary ones.
+                          OutlinedButton(
+                            onPressed: () => Navigator.of(
+                              context,
+                            ).pop(const NepaliCalendarSelection.cleared()),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: clearColor,
+                              side: BorderSide(
+                                color: clearColor.withValues(alpha: 0.5),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            child: Text(
+                              widget.clearLabel ??
+                                  (nepali ? 'हटाउनुहोस्' : 'Clear'),
+                              style: theme.applyFont(const TextStyle()),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                        ],
                         Expanded(
                           child: OutlinedButton(
                             onPressed: () => Navigator.of(context).pop(),

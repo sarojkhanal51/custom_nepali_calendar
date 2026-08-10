@@ -1,3 +1,67 @@
+## 3.1.2
+
+### Added
+
+* `selectableDates` restricts the sheet and strip to a caller-supplied list
+  of days — every other day is disabled, on top of whatever
+  `startDate`/`endDate`/`durationDays` already restrict, not instead of it.
+  Useful for e.g. a fixed set of available appointment slots. Takes
+  `List<NepaliDate>`, so parse any server-supplied date strings yourself
+  first (same pattern as the fiscal-year recipe above). `null` (the default)
+  keeps today's behavior; an empty list disables every day.
+* `showClearButton` allows a Clear button in `showNepaliCalendar` (off by
+  default). Even when enabled it only appears when the sheet opened on a
+  value the caller already held, via `initialSelection` — not just because
+  the user tapped a day in this session (Cancel already covers undoing an
+  in-progress pick). Pressing it resolves to
+  `NepaliCalendarSelection.cleared()` rather than plain `null`, so a caller
+  can tell "the user explicitly removed the value" apart from "the user
+  backed out via Cancel, leave it alone" — both used to be indistinguishable.
+  `clearLabel` overrides its text; `NepaliCalendarSelection.isCleared` is the
+  flag to check. Styled as a compact outlined button, tinted red, so it's
+  visually distinct from Cancel and reads as the irreversible action it is.
+* `initialSelection` preselects `showNepaliCalendar` with a value you already
+  hold — typically whatever it returned last time. Reopening the sheet used
+  to always start blank, with no way to show a previous pick; now passing
+  the same `NepaliCalendarSelection` back in shows it already selected and
+  opens on its month instead of `startDate`'s. `HorizontalDateStrip`'s own
+  calendar button does this automatically with the strip's current value.
+  `null` (the default) keeps the existing "nothing preselected" behavior.
+
+### Fixed
+
+* The sheet and strip no longer re-render the whole month grid on every tap —
+  a controller update now only triggers a rebuild when the selection or
+  calendar system actually changed, and month pages are memoized so an
+  unrelated rebuild reuses the previous cells instead of recomputing them.
+* Swiping between months no longer computes the visible page's cells twice.
+* The header title no longer recomputes on every scroll frame while a month
+  transition is animating — only once the page settles.
+* `NepaliHoliday` now has value-based equality, so passing an equal-but-new
+  holiday list on rebuild no longer forces the holiday lookup to recompute.
+* `endDate`/`durationDays` ordering is now validated for real in release
+  builds (previously only a debug-only assertion), so an inverted or
+  non-positive window throws a clear `ArgumentError` instead of silently
+  leaving nothing selectable.
+* `NepaliDateRange.days` no longer throws when `end` is `NepaliDate.max`, and
+  is now considerably cheaper on multi-month spans.
+* `HorizontalDateStrip`'s "today" indicator no longer reads from a
+  fresh conversion on every build.
+
+### Docs
+
+* Added a "Nepali fiscal year windows" recipe to the README, showing how to
+  cap a picker at today for the current fiscal year while leaving a past one
+  fully open — built entirely from `NepaliDate`'s existing comparison
+  operators, `lastDayOfMonth` and `.now()`, no new package API involved.
+* The example app now demonstrates that recipe, including parsing fiscal-year
+  bounds from server-supplied `"yyyy-MM-dd"` strings — see
+  `example/lib/fiscal_year.dart`.
+* The example app's date and range pickers both now demonstrate
+  `showClearButton` + `initialSelection` together — pick a date, close, and
+  reopen to see it preselected with Clear available; press Clear to see the
+  result reflect that explicitly, distinct from Cancel.
+
 ## 3.1.1
 
 ### Fixed

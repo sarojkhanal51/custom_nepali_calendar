@@ -47,7 +47,11 @@ Future<List<NepaliCalendarSelection?>> _open(
   NepaliDate? endDate = _yearEnd,
   int? durationDays,
   bool showSystemSwitch = true,
+  List<NepaliDate>? selectableDates,
+  NepaliCalendarSelection? initialSelection,
   bool isDismissible = false,
+  bool showClearButton = false,
+  String? clearLabel,
   String? confirmLabel,
   String? cancelLabel,
 }) async {
@@ -75,7 +79,11 @@ Future<List<NepaliCalendarSelection?>> _open(
                 endDate: endDate,
                 durationDays: durationDays,
                 showSystemSwitch: showSystemSwitch,
+                selectableDates: selectableDates,
+                initialSelection: initialSelection,
                 isDismissible: isDismissible,
+                showClearButton: showClearButton,
+                clearLabel: clearLabel,
                 confirmLabel: confirmLabel,
                 cancelLabel: cancelLabel,
               ),
@@ -117,6 +125,33 @@ void main() {
         isTrue,
       );
     });
+
+    testWidgets(
+      'reopening without passing initialSelection shows nothing selected',
+      (WidgetTester tester) async {
+        // Pick, confirm, and let the sheet close.
+        await _open(tester);
+        await _tapDay(tester, const NepaliDate(2081, 1, 20));
+        await tester.tap(find.text('Done'));
+        await tester.pumpAndSettle();
+        expect(find.byType(BottomSheet), findsNothing);
+
+        // Tap the same "open" button again, from the same host screen — no
+        // remount involved. Nothing carries the previous pick back in unless
+        // the caller explicitly threads it through as initialSelection (see
+        // the "initialSelection" group below).
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+        expect(_confirmButton(tester).onPressed, isNull);
+        expect(
+          tester
+              .widgetList<DayCell>(find.byType(DayCell))
+              .every((DayCell cell) => !cell.day.isSelected),
+          isTrue,
+          reason: 'the previous pick is not preselected without opting in',
+        );
+      },
+    );
 
     testWidgets('picking a day enables Done, with no date readout', (
       WidgetTester tester,
@@ -235,6 +270,35 @@ void main() {
       expect(selection.dateTimeRange?.start, DateTime(2024, 4, 22));
       expect(selection.date, isNull);
     });
+
+    testWidgets(
+      'reopening after picking a range and confirming shows no band',
+      (WidgetTester tester) async {
+        await _open(tester, mode: NepaliCalendarMode.range);
+        await _tapDay(tester, const NepaliDate(2081, 1, 10));
+        await _tapDay(tester, const NepaliDate(2081, 1, 16));
+        await tester.tap(find.text('Done'));
+        await tester.pumpAndSettle();
+        expect(find.byType(BottomSheet), findsNothing);
+
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+        expect(_confirmButton(tester).onPressed, isNull);
+        expect(
+          tester
+              .widgetList<DayCell>(find.byType(DayCell))
+              .every(
+                (DayCell cell) =>
+                    !cell.day.isSelected &&
+                    !cell.day.isInRange &&
+                    !cell.day.isRangeStart &&
+                    !cell.day.isRangeEnd,
+              ),
+          isTrue,
+          reason: 'the previous range is not preselected on reopen',
+        );
+      },
+    );
 
     testWidgets('the days between the ends are banded', (
       WidgetTester tester,
@@ -974,6 +1038,293 @@ void main() {
       expect(find.text('15 Bai 2081'), findsNothing);
       expect(find.text('Done'), findsOneWidget);
       expect(find.text('Cancel'), findsOneWidget);
+    });
+  });
+
+  group('selectableDates', () {
+    testWidgets('only listed dates are enabled, everything else disabled', (
+      WidgetTester tester,
+    ) async {
+      await _open(
+        tester,
+        selectableDates: const <NepaliDate>[
+          NepaliDate(2081, 1, 15),
+          NepaliDate(2081, 1, 20),
+        ],
+      );
+
+      expect(_dayCell(tester, _anchor).day.isDisabled, isFalse);
+      expect(
+        _dayCell(tester, const NepaliDate(2081, 1, 20)).day.isDisabled,
+        isFalse,
+      );
+      expect(
+        _dayCell(tester, const NepaliDate(2081, 1, 16)).day.isDisabled,
+        isTrue,
+      );
+
+      await _tapDay(tester, const NepaliDate(2081, 1, 16));
+      expect(
+        tester
+            .widget<FilledButton>(find.widgetWithText(FilledButton, 'Done'))
+            .onPressed,
+        isNull,
+        reason: '16 is not in selectableDates, so tapping it selects nothing',
+      );
+    });
+
+    testWidgets('still intersects with the startDate/endDate window', (
+      WidgetTester tester,
+    ) async {
+      await _open(
+        tester,
+        startDate: const NepaliDate(2081, 1, 16),
+        endDate: const NepaliDate(2081, 1, 25),
+        // 15 is listed but outside the window; 20 is inside both.
+        selectableDates: const <NepaliDate>[
+          NepaliDate(2081, 1, 15),
+          NepaliDate(2081, 1, 20),
+        ],
+      );
+
+      expect(
+        _dayCell(tester, const NepaliDate(2081, 1, 15)).day.isDisabled,
+        isTrue,
+        reason: 'outside the startDate/endDate window',
+      );
+      expect(
+        _dayCell(tester, const NepaliDate(2081, 1, 20)).day.isDisabled,
+        isFalse,
+      );
+    });
+
+    testWidgets('an empty list disables every day', (
+      WidgetTester tester,
+    ) async {
+      await _open(tester, selectableDates: const <NepaliDate>[]);
+
+      expect(_dayCell(tester, _anchor).day.isDisabled, isTrue);
+      expect(
+        _dayCell(tester, const NepaliDate(2081, 1, 20)).day.isDisabled,
+        isTrue,
+      );
+    });
+
+    testWidgets('null (the default) restricts nothing beyond the window', (
+      WidgetTester tester,
+    ) async {
+      await _open(tester);
+
+      expect(_dayCell(tester, _anchor).day.isDisabled, isFalse);
+      expect(
+        _dayCell(tester, const NepaliDate(2081, 1, 25)).day.isDisabled,
+        isFalse,
+      );
+    });
+  });
+
+  group('initialSelection', () {
+    testWidgets('single mode: preselects the date and opens its month', (
+      WidgetTester tester,
+    ) async {
+      // Baishakh 2081 (startDate's month) is not this date's month.
+      const NepaliDate previouslyPicked = NepaliDate(2081, 6, 5);
+      await _open(
+        tester,
+        initialSelection: const NepaliCalendarSelection.single(
+          previouslyPicked,
+        ),
+      );
+
+      expect(find.textContaining('Ashoj 2081'), findsOneWidget);
+      expect(_dayCell(tester, previouslyPicked).day.isSelected, isTrue);
+      expect(_confirmButton(tester).onPressed, isNotNull);
+    });
+
+    testWidgets(
+      'range mode: preselects both ends, banded, and opens on start',
+      (WidgetTester tester) async {
+        const NepaliDateRange previousRange = NepaliDateRange(
+          start: NepaliDate(2081, 6, 5),
+          end: NepaliDate(2081, 6, 10),
+        );
+        await _open(
+          tester,
+          mode: NepaliCalendarMode.range,
+          initialSelection: const NepaliCalendarSelection.range(previousRange),
+        );
+
+        expect(find.textContaining('Ashoj 2081'), findsOneWidget);
+        expect(_dayCell(tester, previousRange.start).day.isRangeStart, isTrue);
+        expect(_dayCell(tester, previousRange.end).day.isRangeEnd, isTrue);
+        expect(_confirmButton(tester).onPressed, isNotNull);
+      },
+    );
+
+    testWidgets('re-confirming an unchanged preselection returns it back', (
+      WidgetTester tester,
+    ) async {
+      const NepaliDate previouslyPicked = NepaliDate(2081, 1, 20);
+      final List<NepaliCalendarSelection?> results = await _open(
+        tester,
+        initialSelection: const NepaliCalendarSelection.single(
+          previouslyPicked,
+        ),
+      );
+
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+
+      expect(results.single?.date, previouslyPicked);
+    });
+
+    testWidgets('null (the default) is unaffected', (
+      WidgetTester tester,
+    ) async {
+      await _open(tester);
+      expect(_confirmButton(tester).onPressed, isNull);
+    });
+  });
+
+  group('the Clear button', () {
+    testWidgets('is hidden by default', (WidgetTester tester) async {
+      await _open(tester);
+      expect(find.text('Clear'), findsNothing);
+    });
+
+    testWidgets(
+      'stays hidden on a blank open even when showClearButton is true',
+      (WidgetTester tester) async {
+        await _open(tester, showClearButton: true);
+        expect(
+          find.text('Clear'),
+          findsNothing,
+          reason: 'nothing selected yet, so nothing to clear',
+        );
+      },
+    );
+
+    testWidgets('shows once initialSelection seeds a selection', (
+      WidgetTester tester,
+    ) async {
+      await _open(
+        tester,
+        showClearButton: true,
+        initialSelection: const NepaliCalendarSelection.single(
+          NepaliDate(2081, 1, 20),
+        ),
+      );
+      expect(find.text('Clear'), findsOneWidget);
+    });
+
+    testWidgets('stays hidden after tapping a day, without initialSelection', (
+      WidgetTester tester,
+    ) async {
+      await _open(tester, showClearButton: true);
+      expect(find.text('Clear'), findsNothing);
+
+      // Picking a day in this session is not "removing a previous value" —
+      // Cancel already covers undoing an in-progress pick.
+      await _tapDay(tester, const NepaliDate(2081, 1, 20));
+      expect(find.text('Clear'), findsNothing);
+    });
+
+    testWidgets('resolves to a distinct cleared selection, not null', (
+      WidgetTester tester,
+    ) async {
+      final List<NepaliCalendarSelection?> results = await _open(
+        tester,
+        showClearButton: true,
+        initialSelection: const NepaliCalendarSelection.single(
+          NepaliDate(2081, 1, 20),
+        ),
+      );
+
+      await tester.tap(find.text('Clear'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(BottomSheet), findsNothing);
+      final NepaliCalendarSelection selection = results.single!;
+      expect(selection.isCleared, isTrue);
+      expect(selection.date, isNull);
+      expect(selection.range, isNull);
+    });
+
+    testWidgets(
+      'overrides a same-session re-pick made on top of the initial value',
+      (WidgetTester tester) async {
+        final List<NepaliCalendarSelection?> results = await _open(
+          tester,
+          showClearButton: true,
+          initialSelection: const NepaliCalendarSelection.single(
+            NepaliDate(2081, 1, 15),
+          ),
+        );
+
+        // Change the pick, then clear instead of confirming the new pick.
+        await _tapDay(tester, const NepaliDate(2081, 1, 20));
+        await tester.tap(find.text('Clear'));
+        await tester.pumpAndSettle();
+
+        final NepaliCalendarSelection selection = results.single!;
+        expect(selection.isCleared, isTrue);
+        expect(selection.date, isNull);
+      },
+    );
+
+    testWidgets('clearLabel overrides the default text', (
+      WidgetTester tester,
+    ) async {
+      await _open(
+        tester,
+        showClearButton: true,
+        clearLabel: 'Remove date',
+        initialSelection: const NepaliCalendarSelection.single(
+          NepaliDate(2081, 1, 20),
+        ),
+      );
+      expect(find.text('Clear'), findsNothing);
+      expect(find.text('Remove date'), findsOneWidget);
+    });
+
+    testWidgets('works in range mode too', (WidgetTester tester) async {
+      const NepaliDateRange initialRange = NepaliDateRange(
+        start: NepaliDate(2081, 1, 10),
+        end: NepaliDate(2081, 1, 16),
+      );
+      final List<NepaliCalendarSelection?> results = await _open(
+        tester,
+        mode: NepaliCalendarMode.range,
+        showClearButton: true,
+        initialSelection: const NepaliCalendarSelection.range(initialRange),
+      );
+
+      await tester.tap(find.text('Clear'));
+      await tester.pumpAndSettle();
+
+      final NepaliCalendarSelection selection = results.single!;
+      expect(selection.isCleared, isTrue);
+      expect(selection.range, isNull);
+    });
+  });
+
+  group('NepaliCalendarSelection.cleared value semantics', () {
+    test('two cleared instances are equal', () {
+      expect(
+        const NepaliCalendarSelection.cleared(),
+        const NepaliCalendarSelection.cleared(),
+      );
+      expect(
+        const NepaliCalendarSelection.cleared().hashCode,
+        const NepaliCalendarSelection.cleared().hashCode,
+      );
+    });
+
+    test('a cleared selection is not equal to a picked one', () {
+      expect(
+        const NepaliCalendarSelection.cleared(),
+        isNot(const NepaliCalendarSelection.single(NepaliDate(2081, 1, 1))),
+      );
     });
   });
 

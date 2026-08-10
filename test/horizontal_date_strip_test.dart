@@ -19,6 +19,7 @@ Future<List<NepaliDate>> _pump(
   NepaliDate startDate = anchor,
   NepaliDate? endDate,
   int? durationDays,
+  List<NepaliDate>? selectableDates,
   Language language = Language.english,
   CalendarSystem system = CalendarSystem.bs,
   bool showCalendarButton = true,
@@ -38,6 +39,7 @@ Future<List<NepaliDate>> _pump(
               startDate: startDate,
               endDate: endDate,
               durationDays: durationDays,
+              selectableDates: selectableDates,
               language: language,
               system: system,
               showCalendarButton: showCalendarButton,
@@ -276,6 +278,60 @@ void main() {
     });
   });
 
+  group('selectableDates', () {
+    testWidgets('only listed dates report a tap', (WidgetTester tester) async {
+      final List<NepaliDate> picked = await _pump(
+        tester,
+        startDate: anchor,
+        selectableDates: const <NepaliDate>[
+          NepaliDate(2081, 1, 15),
+          NepaliDate(2081, 1, 17),
+        ],
+      );
+
+      await tester.tap(find.text('16'));
+      await tester.pumpAndSettle();
+      expect(picked, <NepaliDate>[
+        anchor,
+      ], reason: '16 is not in selectableDates, so tapping it did nothing');
+
+      await tester.tap(find.text('17'));
+      await tester.pumpAndSettle();
+      expect(picked.last, const NepaliDate(2081, 1, 17));
+    });
+
+    testWidgets('carries into the calendar the button opens', (
+      WidgetTester tester,
+    ) async {
+      await _pump(
+        tester,
+        startDate: anchor,
+        selectableDates: const <NepaliDate>[
+          NepaliDate(2081, 1, 15),
+          NepaliDate(2081, 1, 20),
+        ],
+      );
+
+      await tester.tap(find.byIcon(Icons.calendar_month_outlined));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester
+            .widget<DayCell>(_sheetCell(const NepaliDate(2081, 1, 20)))
+            .day
+            .isDisabled,
+        isFalse,
+      );
+      expect(
+        tester
+            .widget<DayCell>(_sheetCell(const NepaliDate(2081, 1, 16)))
+            .day
+            .isDisabled,
+        isTrue,
+      );
+    });
+  });
+
   group('the calendar button', () {
     testWidgets('opens the sheet and reports what was picked', (
       WidgetTester tester,
@@ -296,6 +352,32 @@ void main() {
 
       // The strip's own default is reported first, then the pick.
       expect(picked, <NepaliDate>[anchor, target]);
+    });
+
+    testWidgets('reopening the calendar after a pick preselects it', (
+      WidgetTester tester,
+    ) async {
+      const NepaliDate target = NepaliDate(2081, 1, 26);
+      await _pump(tester, startDate: anchor);
+
+      await tester.tap(find.byIcon(Icons.calendar_month_outlined));
+      await tester.pumpAndSettle();
+      await tester.tap(_sheetCell(target));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+
+      // The strip now shows `target` selected — the caller's onDateSelected
+      // fed it back in as selectedDate. Reopening the calendar button's
+      // sheet passes that along as initialSelection, so it opens on
+      // target's month with target already highlighted.
+      await tester.tap(find.byIcon(Icons.calendar_month_outlined));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<DayCell>(_sheetCell(target)).day.isSelected,
+        isTrue,
+        reason: "the sheet preselects the strip's current value",
+      );
     });
 
     testWidgets('a date picked outside the strip re-anchors it', (

@@ -7,7 +7,7 @@ and gets the picked value back.
 Written from scratch — **no third-party dependencies**, no platform channels, no
 native code. Pure Dart and the Flutter SDK, so it runs anywhere Flutter runs.
 
-<img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/v3.1.1/doc/screenshots/single_sheet.png" width="200" alt="Single-date picker open in a bottom sheet"> <img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/v3.1.1/doc/screenshots/range_sheet.png" width="200" alt="Range picker open in a bottom sheet"> <img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/v3.1.1/doc/screenshots/single_center.png" width="200" alt="Single-date picker open as a centred dialog"> <img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/v3.1.1/doc/screenshots/range_center.png" width="200" alt="Range picker open as a centred dialog">
+<img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/v3.1.2/doc/screenshots/single_sheet.png" width="200" alt="Single-date picker open in a bottom sheet"> <img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/v3.1.2/doc/screenshots/range_sheet.png" width="200" alt="Range picker open in a bottom sheet"> <img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/v3.1.2/doc/screenshots/single_center.png" width="200" alt="Single-date picker open as a centred dialog"> <img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/v3.1.2/doc/screenshots/range_center.png" width="200" alt="Range picker open as a centred dialog">
 
 ## Features
 
@@ -23,6 +23,15 @@ Everything below is in the code — nothing aspirational.
 - ✅ "Today" shortcut in the header
 - ✅ Month swipe and previous/next arrows
 - ✅ Selectable window via `startDate` with `endDate` or `durationDays`
+- ✅ Build any window from plain `NepaliDate` comparisons — e.g. a Nepali
+  fiscal year capped at today while it's current, fully open once it's past
+  (recipe below)
+- ✅ `selectableDates`: restrict to an exact list of days — e.g. fixed
+  appointment slots — on top of the window, sheet and strip alike
+- ✅ Optional Clear button (`showClearButton`) that resolves distinctly from
+  Cancel, so removing a value and backing out are never confused
+- ✅ `initialSelection` reopens the sheet with a previous pick already
+  selected, on the right month — off by default
 - ✅ `HorizontalDateStrip`: an inline row of days with the calendar one tap away
 - ✅ `holidays`: mark caller-supplied dates in their own colour, sheet and strip alike
 - ✅ Custom Cancel/Done labels
@@ -67,7 +76,9 @@ Everything below is in the code — nothing aspirational.
 - ✅ Zero dependencies — pure Dart, no platform channels, every Flutter platform
 - ✅ Screen-reader labels on every day cell
 - ✅ Fixed six-week grid, so the sheet never changes height while swiping
-- ✅ 161 tests covering conversion, the widget and the layout
+- ✅ Rebuilds only recompute what actually changed — tapping a day or
+  swiping a month doesn't re-render cells that didn't change
+- ✅ 234 tests covering conversion, the widget and the layout
 
 ## Install
 
@@ -141,7 +152,7 @@ mode. The centred one drops the drag handle, since there is no drag to hint at.
 For a row that lives on the screen rather than a sheet — today and the next few
 days, with the full calendar one tap away:
 
-<img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/v3.1.1/doc/screenshots/horizontal_strip.png" width="480" alt="HorizontalDateStrip: an inline row of days, with the full calendar one tap away">
+<img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/v3.1.2/doc/screenshots/horizontal_strip.png" width="480" alt="HorizontalDateStrip: an inline row of days, with the full calendar one tap away">
 
 ```dart
 HorizontalDateStrip(
@@ -154,9 +165,10 @@ HorizontalDateStrip(
 ```
 
 Each chip shows **Today** or its month above the date and the weekday below. The
-trailing button opens `showNepaliCalendar` carrying the same theme, language and
-window; pick a day outside the strip and it re-anchors so the selection stays
-visible.
+trailing button opens `showNepaliCalendar` carrying the same theme, language,
+window, `holidays` and `selectableDates` — and the strip's current day as
+`initialSelection`, so the sheet opens already showing it selected. Pick a day
+outside the strip and it re-anchors so the selection stays visible.
 
 It selects a day on first build — today when the strip covers it, otherwise
 `startDate` — and reports it through `onDateSelected`, so what is on screen and
@@ -173,6 +185,7 @@ what you hold never disagree.
 | `language` | `.english` | |
 | `system` | `.bs` | the chips show that calendar only |
 | `holidays` | `[]` | dates painted in their own colour, also passed to the calendar it opens |
+| `selectableDates` | `null` | only these days pickable, also passed to the calendar it opens |
 | `showCalendarButton` | `true` | the trailing button |
 | `height` | `60` | chips scale to fit |
 
@@ -183,10 +196,12 @@ end; the days between are banded and the confirm button stays disabled until bot
 ends exist.
 
 The sheet shows a BS/AD toggle and nothing else — the language is whatever the
-caller passed and cannot be changed from inside the sheet. Nothing is
-preselected: the user always picks, and the confirm button stays disabled until
-they do. Below the grid there are only the two buttons — no date readout, no
-title: the calendar is the whole sheet.
+caller passed and cannot be changed from inside the sheet. It opens with the
+strip's current day already selected (see `initialSelection` further down), so confirm
+starts enabled rather than disabled. Below the grid there are only Cancel and
+Done — no date readout, no title, no Clear button (that's opt-in on
+`showNepaliCalendar` directly, not wired up here): the calendar is the whole
+sheet.
 
 ### Limiting the calendar: `startDate`, `endDate`, `durationDays`
 
@@ -234,6 +249,68 @@ await showNepaliCalendar(
   the window.
 * Holding Gregorian dates? `NepaliDate.fromDateTime(myDateTime)`.
 
+### Restricting to specific dates
+
+`selectableDates` narrows the window further, down to an exact list — every
+other day is disabled, even ones inside `startDate`/`endDate`. Good for a
+fixed set of available slots, e.g. appointment availability from a server:
+
+```dart
+await showNepaliCalendar(
+  context: context,
+  theme: myTheme,
+  startDate: NepaliDate.now(),
+  endDate: NepaliDate.now().addDays(30),
+  selectableDates: <NepaliDate>[
+    const NepaliDate(2083, 4, 3),
+    const NepaliDate(2083, 4, 7),
+    const NepaliDate(2083, 4, 12),
+  ],
+);
+```
+
+A day must satisfy **both** the window and the list to be pickable — pass
+just `selectableDates` with an unbounded window (no `endDate`/`durationDays`)
+if the list alone should decide. `HorizontalDateStrip` takes the same
+parameter and forwards it into the calendar its button opens, same as
+`holidays`. The parameter takes `NepaliDate` values, not strings — parse any
+server-supplied dates yourself first, same as the fiscal-year recipe below.
+
+### Nepali fiscal year windows
+
+The Nepali fiscal year runs 1 Shrawan through the last day of the following
+Ashadh — e.g. FY 2081/82 is `2081-04-01` .. `2082-03-(end)`. There's no
+dedicated API for this: `startDate`/`endDate` plus `NepaliDate`'s existing
+comparison operators are all it takes to lock the *current* fiscal year to
+today (nothing in the future is pickable) while leaving a *past* one fully
+open, since today naturally isn't relevant to it anymore:
+
+```dart
+final NepaliDate start = const NepaliDate(2081, 4, 1);   // from your data
+final NepaliDate fullEnd = const NepaliDate(2082, 3, 1).lastDayOfMonth;
+final NepaliDate today = NepaliDate.now();
+
+await showNepaliCalendar(
+  context: context,
+  theme: myTheme,
+  startDate: start,
+  // The full fiscal year once it has elapsed, or start..today while it's
+  // still running.
+  endDate: fullEnd > today ? today : fullEnd,
+);
+```
+
+If the fiscal year's bounds come from your backend as BS `"yyyy-MM-dd"`
+strings, parse them the same way `NepaliDate.toString()` formats them —
+`NepaliDate(int.parse(y), int.parse(m), int.parse(d))` — then apply the same
+`end > today ? today : end` cap.
+
+`example/lib/fiscal_year.dart` wraps this in a small `NepaliFiscalYear` class
+(`.current()`, `.forStartYear(year)`, `.parse(start: ..., end: ...)`,
+`.window()`, `.isCurrent`) ready to copy into your app — it isn't part of the
+package's public API, since a picker library shouldn't need an opinion on
+what a fiscal year is; it's just built from what's already public here.
+
 ### Marking holidays
 
 Pass an organization's holiday list and each date in it is painted in its own
@@ -264,6 +341,73 @@ carries straight through. `HorizontalDateStrip` takes the same `holidays`
 parameter and forwards it to the calendar its button opens, so the strip and
 the sheet always agree.
 
+### Letting the user clear a pick
+
+For an optional date field, `showClearButton: true` allows a Clear button —
+off by default, so nothing changes unless you ask for it. It only actually
+appears when the sheet opens on a value the field already holds, via
+`initialSelection` (below) — not just because the user tapped a day in this
+session; Cancel already covers undoing an in-progress pick, so Clear stays
+specifically for removing a value carried over from last time:
+
+```dart
+final selection = await showNepaliCalendar(
+  context: context,
+  theme: myTheme,
+  startDate: NepaliDate.min,
+  initialSelection: myDate == null ? null : NepaliCalendarSelection.single(myDate!),
+  showClearButton: true,
+  clearLabel: 'Remove date',   // optional; defaults to "Clear"
+);
+
+if (selection == null) {
+  // Cancel / dismissed — leave whatever you already had.
+} else if (selection.isCleared) {
+  myDate = null;               // explicitly asked to remove it
+} else {
+  myDate = selection.date;
+}
+```
+
+Without `isCleared`, Clear and Cancel would both just resolve to `null` and
+be indistinguishable — you'd have no way to tell "leave it alone" apart from
+"take it away." Without `initialSelection`, Clear stays hidden even after the
+user picks a day in that session — there's nothing from *before* to remove
+yet, so Cancel is the only way out.
+
+Clear is tinted red — blended from `theme.textColor` rather than a fixed
+hex, so it stays legible in both light and dark themes — as a visual cue
+that, unlike Cancel, it discards a value irreversibly.
+
+### Reopening with the previous pick already selected
+
+By default the sheet never remembers anything between calls — every open
+starts blank, confirm disabled, nothing highlighted, even if the user picked
+something last time and you're reopening to let them change it. Pass
+whatever `showNepaliCalendar` returned last time back in as
+`initialSelection` to fix that:
+
+```dart
+NepaliCalendarSelection? lastPicked;
+
+Future<void> pick() async {
+  final selection = await showNepaliCalendar(
+    context: context,
+    theme: myTheme,
+    startDate: NepaliDate.min,
+    initialSelection: lastPicked,   // shows the previous pick already selected
+  );
+  if (selection != null) lastPicked = selection;   // Cancel leaves it alone
+}
+```
+
+The sheet also opens on the selection's month instead of `startDate`'s, so
+the highlighted day is visible immediately rather than requiring a swipe to
+find it. Works the same way in range mode with a `.range(...)` selection.
+`HorizontalDateStrip` does this automatically for the calendar its own
+button opens — the sheet always shows whatever day is currently selected on
+the strip.
+
 ### All parameters
 
 ```dart
@@ -283,8 +427,12 @@ await showNepaliCalendar(
 
   showSystemSwitch: true,                   // the BS/AD toggle in the header
   holidays: <NepaliHoliday>[...],           // dates painted in their own colour
+  selectableDates: <NepaliDate>[...],       // only these days pickable, on top of the window
+  initialSelection: lastPicked,             // preselects it and opens on its month
   isDismissible: false,                     // default; true allows tap-outside
 
+  showClearButton: true,                    // off by default; resolves to .cleared(), not null
+  clearLabel: 'Remove date',
   confirmLabel: 'Apply',
   cancelLabel: 'Back',
   maxWidth: 480,                            // caps the sheet on tablets
@@ -352,8 +500,15 @@ class NepaliCalendarSelection {
   DateTime? dateTime;          // date as Gregorian
   DateTimeRange? dateTimeRange;// range as Gregorian
   NepaliCalendarMode mode;
+  bool isCleared;               // true when Clear was pressed — see "Letting the user clear a pick"
 }
 ```
+
+`showNepaliCalendar` itself resolves to plain `null` when the user backs out
+(Cancel, swipe-down, back gesture, tap-outside) — meaning "leave whatever you
+already had." That is different from `isCleared`, which means the user
+explicitly asked for the value to be removed; see "Letting the user clear a
+pick" earlier in Use.
 
 `NepaliDate` is an immutable BS year/month/day:
 
@@ -407,7 +562,7 @@ lib/
     data/bs_calendar_data.dart        # BS year -> [days per month]
     localization/calendar_strings.dart
     view/                             # internal: the month grid the sheet shows
-example/                              # one screen, two buttons
+example/                              # one screen: picker, strip, fiscal year
 test/
 ```
 

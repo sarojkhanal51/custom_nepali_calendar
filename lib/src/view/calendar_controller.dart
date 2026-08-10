@@ -18,10 +18,21 @@ class CalendarController extends ChangeNotifier {
   CalendarController({
     required this.mode,
     NepaliDate? focusedDate,
+    NepaliDate? initialDate,
+    NepaliDateRange? initialRange,
     CalendarSystem system = CalendarSystem.bs,
     this.language = Language.english,
-  }) : _focusedDate = focusedDate ?? DateConverter.todayBs(),
-       _system = system;
+  }) : _focusedDate =
+           focusedDate ??
+           initialDate ??
+           initialRange?.start ??
+           DateConverter.todayBs(),
+       _system = system,
+       _selectedDate = mode == NepaliCalendarMode.single ? initialDate : null,
+       _rangeStart = mode == NepaliCalendarMode.range
+           ? initialRange?.start
+           : null,
+       _rangeEnd = mode == NepaliCalendarMode.range ? initialRange?.end : null;
 
   /// Whether taps collect one day or a start/end pair.
   final NepaliCalendarMode mode;

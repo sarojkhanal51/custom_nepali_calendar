@@ -22,6 +22,8 @@ const int daysPerWeek = 7;
 /// trailing days are correct even when a BS month straddles two Gregorian months.
 ///
 /// [startDate] and [endDate] mark days outside the caller's window as disabled.
+/// [selectableDates], when given, additionally disables any day not in it —
+/// a day must satisfy both the window and the allow-list to be selectable.
 ///
 /// A `null` entry renders an empty cell, which happens only at the very edges of
 /// the range the BS table can represent.
@@ -36,6 +38,7 @@ List<CalendarDay?> buildMonthDays({
   NepaliDate? rangeEnd,
   NepaliDate? startDate,
   NepaliDate? endDate,
+  Set<NepaliDate>? selectableDates,
   Map<NepaliDate, Color>? holidayColors,
 }) {
   final int firstDayNumber = system == CalendarSystem.bs
@@ -81,7 +84,8 @@ List<CalendarDay?> buildMonthDays({
         isSelected: selectedDate != null && bsDate == selectedDate,
         isDisabled:
             (minDayNumber != null && dayNumber < minDayNumber) ||
-            (maxDayNumber != null && dayNumber > maxDayNumber),
+            (maxDayNumber != null && dayNumber > maxDayNumber) ||
+            (selectableDates != null && !selectableDates.contains(bsDate)),
         isRangeStart: range != null && bsDate == range.start,
         isRangeEnd: range != null && bsDate == range.end,
         isInRange: range != null && range.contains(bsDate),

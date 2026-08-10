@@ -8,6 +8,7 @@ import '../converters/date_conversion_exception.dart';
 import '../converters/date_converter.dart';
 import '../data/bs_calendar_data.dart';
 import '../data/holiday_lookup.dart';
+import '../data/selectable_dates.dart';
 import '../localization/calendar_strings.dart';
 import '../models/nepali_date.dart';
 import '../models/nepali_date_range.dart';
@@ -47,6 +48,7 @@ class HorizontalDateStrip extends StatefulWidget {
     this.language = Language.english,
     this.system = CalendarSystem.bs,
     this.holidays = const <NepaliHoliday>[],
+    this.selectableDates,
     this.showCalendarButton = true,
     this.presentation = NepaliCalendarPresentation.bottomSheet,
     this.height = 60,
@@ -99,6 +101,11 @@ class HorizontalDateStrip extends StatefulWidget {
   /// Applied to both the strip's chips and the full calendar opened from it.
   final List<NepaliHoliday> holidays;
 
+  /// When given, only these days are selectable — every other day inside the
+  /// strip's window is disabled too, on the chips and in the calendar its
+  /// button opens alike. Null means no restriction beyond the window.
+  final List<NepaliDate>? selectableDates;
+
   /// Whether to show the trailing button that opens the full calendar.
   final bool showCalendarButton;
 
@@ -123,6 +130,9 @@ class _HorizontalDateStripState extends State<HorizontalDateStrip> {
 
   late Map<NepaliDate, Color> _holidayColors = resolveHolidayColors(
     widget.holidays,
+  );
+  late Set<NepaliDate>? _selectableDateSet = toSelectableDateSet(
+    widget.selectableDates,
   );
 
   @override
@@ -164,6 +174,9 @@ class _HorizontalDateStripState extends State<HorizontalDateStrip> {
     }
     if (!listEquals(widget.holidays, oldWidget.holidays)) {
       _holidayColors = resolveHolidayColors(widget.holidays);
+    }
+    if (!listEquals(widget.selectableDates, oldWidget.selectableDates)) {
+      _selectableDateSet = toSelectableDateSet(widget.selectableDates);
     }
     _reAnchorIfSelectionIsOffStrip();
   }
@@ -220,6 +233,7 @@ class _HorizontalDateStripState extends State<HorizontalDateStrip> {
   );
 
   Future<void> _openCalendar() async {
+    final NepaliDate? current = _effectiveSelection;
     final NepaliCalendarSelection? selection = await showNepaliCalendar(
       context: context,
       theme: widget.theme,
@@ -230,6 +244,10 @@ class _HorizontalDateStripState extends State<HorizontalDateStrip> {
       endDate: widget.endDate,
       durationDays: widget.durationDays,
       holidays: widget.holidays,
+      selectableDates: widget.selectableDates,
+      initialSelection: current == null
+          ? null
+          : NepaliCalendarSelection.single(current),
     );
     final NepaliDate? picked = selection?.date;
     if (picked == null) {
@@ -263,7 +281,10 @@ class _HorizontalDateStripState extends State<HorizontalDateStrip> {
                 system: widget.system,
                 isSelected: day == _effectiveSelection,
                 isToday: day == today,
-                isDisabled: !window.contains(day),
+                isDisabled:
+                    !window.contains(day) ||
+                    (_selectableDateSet != null &&
+                        !_selectableDateSet!.contains(day)),
                 holidayColor: _holidayColors[day],
                 onTap: () => widget.onDateSelected(day),
               ),

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../converters/date_converter.dart';
 import '../data/bs_calendar_data.dart';
 import '../data/holiday_lookup.dart';
+import '../data/selectable_dates.dart';
 import '../localization/calendar_strings.dart';
 import '../models/nepali_date.dart';
 import '../models/nepali_date_range.dart';
@@ -31,6 +32,7 @@ class CalendarView extends StatefulWidget {
     this.allowedRange,
     this.showSystemSwitch = true,
     this.holidays = const <NepaliHoliday>[],
+    this.selectableDates,
     this.showAlternateDate = true,
     this.rowHeight = 48,
     super.key,
@@ -51,6 +53,11 @@ class CalendarView extends StatefulWidget {
   /// Days painted in a caller-chosen color, e.g. an organization's holidays.
   final List<NepaliHoliday> holidays;
 
+  /// When given, only these days are selectable — every other day inside
+  /// [allowedRange] is disabled too. Null means no restriction beyond the
+  /// window.
+  final List<NepaliDate>? selectableDates;
+
   /// Whether each cell shows the other calendar's day number underneath.
   final bool showAlternateDate;
 
@@ -70,6 +77,9 @@ class _CalendarViewState extends State<CalendarView> {
   final TodayCache _todayCache = TodayCache();
   late Map<NepaliDate, Color> _holidayColors = resolveHolidayColors(
     widget.holidays,
+  );
+  late Set<NepaliDate>? _selectableDateSet = toSelectableDateSet(
+    widget.selectableDates,
   );
   final Map<_MonthDaysKey, List<CalendarDay?>> _monthDaysCache =
       <_MonthDaysKey, List<CalendarDay?>>{};
@@ -106,6 +116,10 @@ class _CalendarViewState extends State<CalendarView> {
     super.didUpdateWidget(oldWidget);
     if (!listEquals(widget.holidays, oldWidget.holidays)) {
       _holidayColors = resolveHolidayColors(widget.holidays);
+      _monthDaysCache.clear();
+    }
+    if (!listEquals(widget.selectableDates, oldWidget.selectableDates)) {
+      _selectableDateSet = toSelectableDateSet(widget.selectableDates);
       _monthDaysCache.clear();
     }
   }
@@ -324,6 +338,7 @@ class _CalendarViewState extends State<CalendarView> {
                   rangeEnd: controller.rangeEnd,
                   startDate: widget.allowedRange?.start,
                   endDate: widget.allowedRange?.end,
+                  selectableDates: _selectableDateSet,
                   holidayColors: _holidayColors,
                 ),
               );
