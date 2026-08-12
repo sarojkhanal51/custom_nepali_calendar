@@ -126,19 +126,48 @@ abstract final class CalendarStrings {
   ];
 
   /// Bikram Sambat month names romanized into Latin script, Baishakh..Chaitra.
+  ///
+  /// These are the standard romanizations, and they match the ones
+  /// `nepali_utils` uses, so an app depending on both packages renders the
+  /// same names from either.
   static const List<String> bsMonthsEnglish = <String>[
     'Baishakh',
     'Jestha',
-    'Ashar',
+    'Ashadh',
     'Shrawan',
     'Bhadra',
-    'Ashoj',
+    'Ashwin',
     'Kartik',
     'Mangsir',
     'Poush',
     'Magh',
     'Falgun',
     'Chaitra',
+  ];
+
+  /// Abbreviated Bikram Sambat month names in Latin script.
+  ///
+  /// A hand-written table rather than the first three characters of
+  /// [bsMonthsEnglish], for the same reason [weekdaysShortEnglish] is: a blind
+  /// slice is not a translation. Ashadh and Ashwin both begin "Ash", so
+  /// slicing rendered two months three apart identically — `12 Ash 2081` could
+  /// mean either. Ashadh takes `Asar`, which reads straight off its Devanagari
+  /// (असार) and is what a Nepali reader expects to see.
+  ///
+  /// Matches `nepali_utils`, so the abbreviations agree across both packages.
+  static const List<String> bsMonthsShortEnglish = <String>[
+    'Bai',
+    'Jes',
+    'Asar',
+    'Shr',
+    'Bha',
+    'Ash',
+    'Kar',
+    'Man',
+    'Pou',
+    'Mag',
+    'Fal',
+    'Cha',
   ];
 
   /// Gregorian month names in English, January..December.
@@ -155,6 +184,22 @@ abstract final class CalendarStrings {
     'October',
     'November',
     'December',
+  ];
+
+  /// Abbreviated Gregorian month names in English, Jan..Dec.
+  static const List<String> adMonthsShortEnglish = <String>[
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
 
   /// Gregorian month names transliterated into Devanagari, January..December.
@@ -227,6 +272,31 @@ abstract final class CalendarStrings {
       (CalendarSystem.bs, Language.english) => bsMonthsEnglish[month - 1],
       (CalendarSystem.ad, Language.nepali) => adMonthsNepali[month - 1],
       (CalendarSystem.ad, Language.english) => adMonthsEnglish[month - 1],
+    };
+  }
+
+  /// The abbreviated name of month [month] (1-12) in [mode] and [language].
+  ///
+  /// Every caller that wants a short month name goes through here rather than
+  /// trimming [monthName] itself, so no two months can ever abbreviate to the
+  /// same string.
+  ///
+  /// In [Language.nepali] the full Devanagari name is returned unchanged: it is
+  /// already as short as the Latin abbreviations, and cutting it by code unit
+  /// would separate a vowel mark from its consonant.
+  ///
+  /// Throws a [RangeError] when [month] is outside 1..12.
+  static String monthNameShort(
+    int month,
+    CalendarSystem mode,
+    Language language,
+  ) {
+    RangeError.checkValueInInterval(month, 1, 12, 'month');
+    return switch ((mode, language)) {
+      (CalendarSystem.bs, Language.nepali) => bsMonthsNepali[month - 1],
+      (CalendarSystem.bs, Language.english) => bsMonthsShortEnglish[month - 1],
+      (CalendarSystem.ad, Language.nepali) => adMonthsNepali[month - 1],
+      (CalendarSystem.ad, Language.english) => adMonthsShortEnglish[month - 1],
     };
   }
 

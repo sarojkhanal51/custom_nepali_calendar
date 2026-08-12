@@ -118,6 +118,12 @@ class CalendarController extends ChangeNotifier {
   void previousMonth() => showMonthOf(_focusedDate.previousMonth);
 
   /// Selects today and scrolls to its month.
+  ///
+  /// Selects unconditionally: the controller knows nothing about the caller's
+  /// window or allow-list, so whoever wires this up owns the bounds check. See
+  /// `_resolveTodayAction` in `CalendarView`, which is the only caller and
+  /// hands over this tear-off only once `isDaySelectable` has agreed. Call it
+  /// blind and the sheet can resolve to a day the caller excluded.
   void goToToday() => tapDate(DateConverter.todayBs());
 
   /// Switches the displayed calendar system.

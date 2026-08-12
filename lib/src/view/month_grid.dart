@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../converters/date_converter.dart';
 import '../converters/gregorian_calendar.dart';
+import '../data/day_selectability.dart';
 import '../localization/calendar_strings.dart';
 import '../models/nepali_date.dart';
 import '../models/nepali_date_range.dart';
@@ -48,13 +49,6 @@ List<CalendarDay?> buildMonthDays({
       firstDayNumber -
       GregorianCalendar.dayNumberToWeekdayIndex(firstDayNumber);
 
-  final int? minDayNumber = startDate == null
-      ? null
-      : DateConverter.bsToDayNumber(startDate);
-  final int? maxDayNumber = endDate == null
-      ? null
-      : DateConverter.bsToDayNumber(endDate);
-
   // A range needs both ends before the in-between band can be drawn.
   final NepaliDateRange? range = rangeStart != null && rangeEnd != null
       ? NepaliDateRange(start: rangeStart, end: rangeEnd).normalized
@@ -82,10 +76,12 @@ List<CalendarDay?> buildMonthDays({
             : adDate.year == year && adDate.month == month,
         isToday: bsDate == today,
         isSelected: selectedDate != null && bsDate == selectedDate,
-        isDisabled:
-            (minDayNumber != null && dayNumber < minDayNumber) ||
-            (maxDayNumber != null && dayNumber > maxDayNumber) ||
-            (selectableDates != null && !selectableDates.contains(bsDate)),
+        isDisabled: !isDaySelectable(
+          bsDate,
+          startDate: startDate,
+          endDate: endDate,
+          selectableDates: selectableDates,
+        ),
         isRangeStart: range != null && bsDate == range.start,
         isRangeEnd: range != null && bsDate == range.end,
         isInRange: range != null && range.contains(bsDate),

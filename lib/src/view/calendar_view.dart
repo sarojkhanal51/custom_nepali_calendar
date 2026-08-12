@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../converters/date_converter.dart';
 import '../data/bs_calendar_data.dart';
+import '../data/day_selectability.dart';
 import '../data/holiday_lookup.dart';
 import '../data/selectable_dates.dart';
 import '../localization/calendar_strings.dart';
@@ -221,6 +222,32 @@ class _CalendarViewState extends State<CalendarView> {
     );
   }
 
+  /// What the header's "Today" button should do, or null to disable it.
+  ///
+  /// Three outcomes, because "today" and "today is pickable" are different
+  /// questions. When today is selectable the button jumps there and selects it.
+  /// When today's month is reachable but the day itself is outside the caller's
+  /// window or allow-list, the button still navigates — that is useful — but
+  /// selects nothing, because [showNepaliCalendar] must never resolve to a day
+  /// the caller excluded. When today's month is out of the pager entirely the
+  /// button has nothing to do and renders disabled instead of silently
+  /// swallowing the tap.
+  VoidCallback? _resolveTodayAction() {
+    final NepaliDate today = _todayCache.today;
+    if (!_pager.contains(today)) {
+      return null;
+    }
+    if (isDaySelectable(
+      today,
+      startDate: widget.allowedRange?.start,
+      endDate: widget.allowedRange?.end,
+      selectableDates: _selectableDateSet,
+    )) {
+      return widget.controller.goToToday;
+    }
+    return () => widget.controller.showMonthOf(today);
+  }
+
   String _title(_MonthRef ref) =>
       '${CalendarStrings.monthName(ref.month, _system, widget.controller.language)} '
       '${NepaliNumerals.format(ref.year, widget.controller.language)}';
@@ -294,11 +321,7 @@ class _CalendarViewState extends State<CalendarView> {
               onPrevious: () => _movePage(-1),
               onNext: () => _movePage(1),
               onSystemChanged: controller.setSystem,
-              onToday: () {
-                if (_pager.contains(_todayCache.today)) {
-                  controller.goToToday();
-                }
-              },
+              onToday: _resolveTodayAction(),
               showSystemSwitch: widget.showSystemSwitch,
             );
           },

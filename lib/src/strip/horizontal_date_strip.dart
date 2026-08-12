@@ -4,9 +4,8 @@ library;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import '../converters/date_conversion_exception.dart';
-import '../converters/date_converter.dart';
 import '../data/bs_calendar_data.dart';
+import '../data/day_selectability.dart';
 import '../data/holiday_lookup.dart';
 import '../data/selectable_dates.dart';
 import '../localization/calendar_strings.dart';
@@ -16,6 +15,7 @@ import '../models/nepali_holiday.dart';
 import '../sheet/calendar_window.dart';
 import '../sheet/nepali_calendar_sheet.dart';
 import '../theme/nepali_calendar_theme.dart';
+import '../util/today_cache.dart';
 
 /// A short row of consecutive days — today and the next few — with a trailing
 /// button that opens the full calendar for anything outside that range.
@@ -128,11 +128,28 @@ class _HorizontalDateStripState extends State<HorizontalDateStrip> {
   /// Today, once it has been reported, so the default fires only on first build.
   NepaliDate? _defaultedTo;
 
+  /// "Today" without a fresh BS conversion on every build — the strip rebuilds
+  /// on every tap, and the answer changes at most once a day.
+  final TodayCache _todayCache = TodayCache();
+
   late Map<NepaliDate, Color> _holidayColors = resolveHolidayColors(
     widget.holidays,
   );
   late Set<NepaliDate>? _selectableDateSet = toSelectableDateSet(
     widget.selectableDates,
+  );
+
+  /// The resolved start/end window, held rather than recomputed.
+  ///
+  /// Resolving it converts dates, and both the per-chip disabled check and the
+  /// default-selection check now ask for it, so a getter would put a handful
+  /// of conversions on every build.
+  late NepaliDateRange _window = _resolveWindow();
+
+  NepaliDateRange _resolveWindow() => resolveCalendarWindow(
+    startDate: widget.startDate,
+    endDate: widget.endDate,
+    durationDays: widget.durationDays,
   );
 
   @override
@@ -146,15 +163,27 @@ class _HorizontalDateStripState extends State<HorizontalDateStrip> {
   /// Today when the strip covers it — the common case, where the strip starts
   /// today — and otherwise the first day on the strip, so something is always
   /// selected and the caller holds the same value the user can see.
+  ///
+  /// Only ever a day the caller would actually accept: a default that ignored
+  /// `endDate`/`durationDays`/`selectableDates` would hand back a date the
+  /// strip is simultaneously painting as disabled, which is the one thing the
+  /// "what is on screen and what the caller holds never disagree" promise
+  /// above rules out. When nothing on the strip qualifies, nothing is
+  /// reported — an empty selection is honest, a forbidden one is not.
   void _selectDefaultIfNothingSelected() {
     if (widget.selectedDate != null) {
       return;
     }
-    final NepaliDate today = DateConverter.todayBs();
+    final NepaliDate today = _todayCache.today;
     final int offset = widget.startDate.differenceInDays(today);
-    final NepaliDate initial = offset >= 0 && offset < widget.dayCount
-        ? today
-        : widget.startDate;
+    final bool stripCoversToday = offset >= 0 && offset < widget.dayCount;
+    final NepaliDate? initial = <NepaliDate>[
+      if (stripCoversToday) today,
+      ..._days,
+    ].where(_isSelectable).firstOrNull;
+    if (initial == null) {
+      return;
+    }
     _defaultedTo = initial;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -162,6 +191,14 @@ class _HorizontalDateStripState extends State<HorizontalDateStrip> {
       }
     });
   }
+
+  /// Whether [date] passes both the window and the caller's allow-list.
+  bool _isSelectable(NepaliDate date) => isDaySelectable(
+    date,
+    startDate: _window.start,
+    endDate: _window.end,
+    selectableDates: _selectableDateSet,
+  );
 
   /// What to paint as selected: the caller's value, or the day defaulted to.
   NepaliDate? get _effectiveSelection => widget.selectedDate ?? _defaultedTo;
@@ -177,6 +214,11 @@ class _HorizontalDateStripState extends State<HorizontalDateStrip> {
     }
     if (!listEquals(widget.selectableDates, oldWidget.selectableDates)) {
       _selectableDateSet = toSelectableDateSet(widget.selectableDates);
+    }
+    if (widget.startDate != oldWidget.startDate ||
+        widget.endDate != oldWidget.endDate ||
+        widget.durationDays != oldWidget.durationDays) {
+      _window = _resolveWindow();
     }
     _reAnchorIfSelectionIsOffStrip();
   }
@@ -196,6 +238,11 @@ class _HorizontalDateStripState extends State<HorizontalDateStrip> {
   /// The strip's days, walked directly in Bikram Sambat rather than through
   /// repeated Gregorian round-trips — this scales with [widget.dayCount] and
   /// runs on every build.
+  ///
+  /// Stops early rather than throwing when the walk runs off the end of the
+  /// month-length table: this is reached from [build], where an exception has
+  /// nowhere to go and takes the host screen down with it. A strip anchored on
+  /// the last representable day renders that one day.
   List<NepaliDate> get _days {
     final List<NepaliDate> result = <NepaliDate>[];
     int year = _anchor.year;
@@ -215,22 +262,12 @@ class _HorizontalDateStripState extends State<HorizontalDateStrip> {
           year++;
         }
         if (!BsCalendarData.isSupportedYear(year)) {
-          throw DateConversionException.outOfRange(
-            date: '$year-${month.toString().padLeft(2, '0')}',
-            supportedFrom: BsCalendarData.minYear,
-            supportedTo: BsCalendarData.maxYear,
-          );
+          break;
         }
       }
     }
     return result;
   }
-
-  NepaliDateRange get _window => resolveCalendarWindow(
-    startDate: widget.startDate,
-    endDate: widget.endDate,
-    durationDays: widget.durationDays,
-  );
 
   Future<void> _openCalendar() async {
     final NepaliDate? current = _effectiveSelection;
@@ -250,7 +287,9 @@ class _HorizontalDateStripState extends State<HorizontalDateStrip> {
           : NepaliCalendarSelection.single(current),
     );
     final NepaliDate? picked = selection?.date;
-    if (picked == null) {
+    // The host route can be popped or replaced while the sheet is open, which
+    // disposes this strip out from under the await.
+    if (picked == null || !mounted) {
       return;
     }
     setState(() {
@@ -265,8 +304,7 @@ class _HorizontalDateStripState extends State<HorizontalDateStrip> {
   @override
   Widget build(BuildContext context) {
     _reAnchorIfSelectionIsOffStrip();
-    final NepaliDateRange window = _window;
-    final NepaliDate today = DateConverter.todayBs();
+    final NepaliDate today = _todayCache.today;
 
     return SizedBox(
       height: widget.height,
@@ -281,10 +319,7 @@ class _HorizontalDateStripState extends State<HorizontalDateStrip> {
                 system: widget.system,
                 isSelected: day == _effectiveSelection,
                 isToday: day == today,
-                isDisabled:
-                    !window.contains(day) ||
-                    (_selectableDateSet != null &&
-                        !_selectableDateSet!.contains(day)),
+                isDisabled: !_isSelectable(day),
                 holidayColor: _holidayColors[day],
                 onTap: () => widget.onDateSelected(day),
               ),
@@ -320,14 +355,12 @@ class _DayChip extends StatelessWidget {
   final Color? holidayColor;
   final VoidCallback onTap;
 
-  /// The month this day belongs to, abbreviated for Latin script only —
-  /// slicing Devanagari would separate a vowel mark from its consonant.
+  /// The month this day belongs to, abbreviated.
   String _monthLabel() {
     final int month = system == CalendarSystem.bs
         ? date.month
         : date.toDateTime().month;
-    final String name = CalendarStrings.monthName(month, system, language);
-    return language.isNepali || name.length <= 3 ? name : name.substring(0, 3);
+    return CalendarStrings.monthNameShort(month, system, language);
   }
 
   Color _secondaryColor() => isSelected

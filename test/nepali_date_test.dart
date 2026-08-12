@@ -86,7 +86,7 @@ void main() {
     });
 
     test('nextMonth and previousMonth clamp the day to the month length', () {
-      // Jestha 2081 has 32 days, Ashar has 31: day 32 clamps to 31.
+      // Jestha 2081 has 32 days, Ashadh has 31: day 32 clamps to 31.
       expect(
         const NepaliDate(2081, 2, 32).nextMonth,
         const NepaliDate(2081, 3, 31),

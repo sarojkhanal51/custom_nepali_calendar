@@ -56,8 +56,11 @@ class CalendarHeader extends StatelessWidget {
   /// Switches the calendar system.
   final ValueChanged<CalendarSystem> onSystemChanged;
 
-  /// Jumps to today and selects it.
-  final VoidCallback onToday;
+  /// Jumps to today, selecting it when the caller's window allows.
+  ///
+  /// Null when today is out of reach entirely, which renders the button
+  /// disabled rather than leaving it looking live and doing nothing.
+  final VoidCallback? onToday;
 
   /// Whether the BS/AD switch is visible.
   final bool showSystemSwitch;
@@ -181,28 +184,40 @@ class _TodayButton extends StatelessWidget {
 
   final String label;
   final NepaliCalendarTheme theme;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onPressed,
-      borderRadius: BorderRadius.circular(theme.borderRadius),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(theme.borderRadius),
-          border: Border.all(
-            color: theme.headerTextColor.withValues(alpha: 0.5),
+    // Faded to the same 0.3 the month arrows use when they run out of months,
+    // so "unreachable" looks the same wherever it happens in the header.
+    final bool enabled = onPressed != null;
+    final Color foreground = theme.headerTextColor.withValues(
+      alpha: enabled ? 1 : 0.3,
+    );
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(theme.borderRadius),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(theme.borderRadius),
+            border: Border.all(
+              color: theme.headerTextColor.withValues(
+                alpha: enabled ? 0.5 : 0.2,
+              ),
+            ),
           ),
-        ),
-        child: Text(
-          label,
-          style: theme.applyFont(
-            TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: theme.headerTextColor,
+          child: Text(
+            label,
+            style: theme.applyFont(
+              TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: foreground,
+              ),
             ),
           ),
         ),

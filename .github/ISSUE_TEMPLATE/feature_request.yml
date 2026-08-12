@@ -1,0 +1,49 @@
+name: Feature request
+description: Something the package cannot do that you need it to.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This package keeps its public surface deliberately small, so the most
+        persuasive request is one that describes the problem rather than the
+        API — the shape of the solution is usually the easy part to work out
+        together.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do
+      description: >-
+        The user-facing outcome you need, not the API you have in mind for it.
+      placeholder: |
+        I need the picker inside a form, so the selected date validates and
+        saves along with the rest of the fields.
+    validations:
+      required: true
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: What you are doing today instead
+      description: >-
+        The workaround, if you have one, and where it falls down. "Nothing —
+        I gave up and used another package" is a completely valid and very
+        useful answer.
+    validations:
+      required: true
+
+  - type: textarea
+    id: shape
+    attributes:
+      label: What it might look like
+      description: Optional. Sketch a call if you already have one in mind.
+      render: dart
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you file
+      options:
+        - label: I searched the existing issues, open and closed.
+          required: true

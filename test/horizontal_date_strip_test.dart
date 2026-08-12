@@ -442,6 +442,77 @@ void main() {
     });
   });
 
+  // The strip reports a starting selection when the caller passes none. That
+  // default used to ignore the window and the allow-list entirely, so the
+  // caller ended up holding a date the strip was painting as disabled.
+  group('the default selection', () {
+    testWidgets('respects selectableDates', (WidgetTester tester) async {
+      const NepaliDate allowed = NepaliDate(2081, 1, 17);
+      final List<NepaliDate> picked = await _pump(
+        tester,
+        startDate: anchor,
+        selectableDates: <NepaliDate>[allowed],
+      );
+
+      expect(picked, <NepaliDate>[allowed]);
+    });
+
+    testWidgets('respects the endDate window', (WidgetTester tester) async {
+      // The strip shows 15..19 Baishakh but the window closes on the 15th.
+      final List<NepaliDate> picked = await _pump(
+        tester,
+        startDate: anchor,
+        durationDays: 1,
+      );
+
+      expect(picked, <NepaliDate>[anchor]);
+    });
+
+    testWidgets('reports nothing when no visible day is selectable', (
+      WidgetTester tester,
+    ) async {
+      // The only allowed day is well past the five the strip renders.
+      final List<NepaliDate> picked = await _pump(
+        tester,
+        startDate: anchor,
+        selectableDates: <NepaliDate>[const NepaliDate(2081, 3, 1)],
+      );
+
+      expect(
+        picked,
+        isEmpty,
+        reason: 'reported a day it was simultaneously painting as disabled',
+      );
+    });
+  });
+
+  group('the end of the supported range', () {
+    testWidgets('renders instead of throwing out of build', (
+      WidgetTester tester,
+    ) async {
+      await _pump(tester, startDate: NepaliDate.max);
+
+      expect(tester.takeException(), isNull);
+      // Only the final representable day is left to show.
+      expect(find.text('${NepaliDate.max.day}'), findsOneWidget);
+    });
+
+    testWidgets('clamps a strip that straddles the last day', (
+      WidgetTester tester,
+    ) async {
+      await _pump(tester, startDate: NepaliDate.max.subtractDays(2));
+
+      expect(tester.takeException(), isNull);
+      for (final NepaliDate day in <NepaliDate>[
+        NepaliDate.max.subtractDays(2),
+        NepaliDate.max.subtractDays(1),
+        NepaliDate.max,
+      ]) {
+        expect(find.text('${day.day}'), findsOneWidget);
+      }
+    });
+  });
+
   group('layout', () {
     for (final double width in <double>[320, 390, 430]) {
       for (final Language language in Language.values) {

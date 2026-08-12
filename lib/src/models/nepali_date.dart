@@ -199,7 +199,7 @@ class NepaliDate implements Comparable<NepaliDate> {
   /// | `yyyy` | 4-digit year                     | `2081`               |
   /// | `yy`   | 2-digit year                     | `81`                 |
   /// | `MMMM` | full month name                  | `Baishakh`           |
-  /// | `MMM`  | short month name (first 3 chars) | `Bai`                |
+  /// | `MMM`  | abbreviated month name           | `Bai`                |
   /// | `MM`   | zero-padded month number         | `01`                  |
   /// | `M`    | month number                     | `1`                  |
   /// | `dd`   | zero-padded day                  | `05`                 |
@@ -256,14 +256,11 @@ class NepaliDate implements Comparable<NepaliDate> {
           return monthName(language);
         }
         if (run == 3) {
-          final String name = monthName(language);
-          // Devanagari month names are short already, and slicing them by code
-          // unit would cut a vowel mark off its consonant, so only the Latin
-          // names are abbreviated.
-          if (language.isNepali || name.length <= 3) {
-            return name;
-          }
-          return name.substring(0, 3);
+          return CalendarStrings.monthNameShort(
+            month,
+            CalendarSystem.bs,
+            language,
+          );
         }
         return NepaliNumerals.format(month, language, padTo: run);
       case 'd':

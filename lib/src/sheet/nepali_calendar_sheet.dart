@@ -3,6 +3,8 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../data/day_selectability.dart';
+import '../data/selectable_dates.dart';
 import '../localization/calendar_strings.dart';
 import '../models/nepali_date.dart';
 import '../models/nepali_date_range.dart';
@@ -191,6 +193,15 @@ class NepaliCalendarSelection {
 ///   The sheet also opens on the selection's month instead of [startDate]'s.
 ///   Leave it `null` (the default) for the existing "nothing preselected"
 ///   behavior.
+///
+///   It is checked against the same bounds a tap is. A value that falls
+///   outside [startDate]/[endDate]/[durationDays], or that [selectableDates]
+///   excludes, is ignored and the sheet opens with nothing selected — so
+///   handing back a stale value is always safe, and this call can never
+///   resolve to a day you excluded. That matters most for the common pattern
+///   of persisting the last result against a rolling window like
+///   `startDate: NepaliDate.now()`, where yesterday's pick falls out of the
+///   window overnight.
 /// * [isDismissible] defaults to `false`, so a stray tap on the barrier cannot
 ///   throw away a half-finished range. Set it to `true` for a sheet the user can
 ///   flick away.
@@ -216,10 +227,8 @@ Future<NepaliCalendarSelection?> showNepaliCalendar({
   String? cancelLabel,
   double maxWidth = 480,
 }) {
-  assert(
-    endDate == null || durationDays == null,
-    'Give the window an endDate or a durationDays, not both.',
-  );
+  // The endDate/durationDays conflict is rejected by resolveCalendarWindow
+  // below, in release as well as debug — no assert needed here on top of it.
   final Widget body = _CalendarSheet(
     mode: mode,
     theme: theme,
@@ -314,18 +323,63 @@ class _CalendarSheet extends StatefulWidget {
 }
 
 class _CalendarSheetState extends State<_CalendarSheet> {
+  /// The caller's [_CalendarSheet.initialSelection], or null when it names days
+  /// this sheet would not let the user pick anyway.
+  ///
+  /// A preselected value is still a value the sheet can resolve to — Done is
+  /// live the moment it opens — so it has to clear the same bar a tap does.
+  /// Without this check, the ordinary "hand back whatever you got last time"
+  /// pattern quietly breaks as soon as the window moves: a value picked
+  /// yesterday, replayed into a window that now starts today, would arrive
+  /// preselected, render greyed out and selected at once, and be confirmable
+  /// without the user touching a thing.
+  ///
+  /// Rejecting it here also settles the mode mismatch: a `.single` handed to
+  /// range mode (or the reverse) resolves to null, so the Clear button stops
+  /// offering to erase a value the sheet never showed.
+  late final NepaliCalendarSelection? _initialSelection =
+      _resolveInitialSelection();
+
+  NepaliCalendarSelection? _resolveInitialSelection() {
+    final NepaliCalendarSelection? selection = widget.initialSelection;
+    if (selection == null || selection.isCleared) {
+      return null;
+    }
+    final Set<NepaliDate>? allowed = toSelectableDateSet(
+      widget.selectableDates,
+    );
+    bool selectable(NepaliDate date) => isDaySelectable(
+      date,
+      startDate: widget.allowedRange?.start,
+      endDate: widget.allowedRange?.end,
+      selectableDates: allowed,
+    );
+
+    if (widget.mode.isRange) {
+      final NepaliDateRange? range = selection.range;
+      // Only the ends are checked: they are the days the user actually picks,
+      // and an allow-list is about pickable days, not the span between them.
+      if (range == null || !selectable(range.start) || !selectable(range.end)) {
+        return null;
+      }
+      return selection;
+    }
+    final NepaliDate? date = selection.date;
+    return date != null && selectable(date) ? selection : null;
+  }
+
   // Nothing is preselected by default: the sheet opens on the window's first
   // month (or today when unbounded) and the user picks from there. When
-  // widget.initialSelection is given, the sheet opens on its month instead
-  // and starts with it already selected.
+  // initialSelection survives _resolveInitialSelection, the sheet opens on its
+  // month instead and starts with it already selected.
   late final CalendarController _controller = CalendarController(
     mode: widget.mode,
     focusedDate:
-        widget.initialSelection?.date ??
-        widget.initialSelection?.range?.start ??
+        _initialSelection?.date ??
+        _initialSelection?.range?.start ??
         widget.allowedRange?.start,
-    initialDate: widget.initialSelection?.date,
-    initialRange: widget.initialSelection?.range,
+    initialDate: _initialSelection?.date,
+    initialRange: _initialSelection?.range,
     system: widget.initialSystem,
     language: widget.language,
   );
@@ -388,8 +442,8 @@ class _CalendarSheetState extends State<_CalendarSheet> {
               // was there before", not "undo my in-progress pick" (Cancel
               // already does that).
               final bool hasInitialSelection =
-                  widget.initialSelection?.date != null ||
-                  widget.initialSelection?.range != null;
+                  _initialSelection?.date != null ||
+                  _initialSelection?.range != null;
               // Tinted red rather than neutral: unlike Cancel, Clear discards
               // a value irreversibly, so it earns a touch of warning colour.
               // Blended from the theme's own textColor rather than a flat

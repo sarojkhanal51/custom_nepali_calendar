@@ -768,7 +768,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Next month'));
       await tester.pumpAndSettle();
-      expect(find.text('Ashar 2081'), findsOneWidget);
+      expect(find.text('Ashadh 2081'), findsOneWidget);
       expect(_arrow(tester, next: true).onPressed, isNull);
     });
 
@@ -1136,7 +1136,7 @@ void main() {
         ),
       );
 
-      expect(find.textContaining('Ashoj 2081'), findsOneWidget);
+      expect(find.textContaining('Ashwin 2081'), findsOneWidget);
       expect(_dayCell(tester, previouslyPicked).day.isSelected, isTrue);
       expect(_confirmButton(tester).onPressed, isNotNull);
     });
@@ -1154,7 +1154,7 @@ void main() {
           initialSelection: const NepaliCalendarSelection.range(previousRange),
         );
 
-        expect(find.textContaining('Ashoj 2081'), findsOneWidget);
+        expect(find.textContaining('Ashwin 2081'), findsOneWidget);
         expect(_dayCell(tester, previousRange.start).day.isRangeStart, isTrue);
         expect(_dayCell(tester, previousRange.end).day.isRangeEnd, isTrue);
         expect(_confirmButton(tester).onPressed, isNotNull);

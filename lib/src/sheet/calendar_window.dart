@@ -19,6 +19,15 @@ NepaliDateRange resolveCalendarWindow({
   NepaliDate? endDate,
   int? durationDays,
 }) {
+  if (endDate != null && durationDays != null) {
+    // Was an assert, so in release the two silently collapsed to endDate and
+    // the caller's durationDays was dropped without a word. The neighbouring
+    // ordering checks already throw for real; this one now matches them.
+    throw ArgumentError(
+      'Give the window an endDate or a durationDays, not both '
+      '(got endDate: $endDate and durationDays: $durationDays).',
+    );
+  }
   if (endDate != null) {
     if (endDate < startDate) {
       throw ArgumentError.value(

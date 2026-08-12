@@ -31,7 +31,7 @@ library;
 export 'src/converters/date_conversion_exception.dart';
 export 'src/converters/date_converter.dart';
 export 'src/localization/calendar_strings.dart'
-    show CalendarSystem, Language, NepaliNumerals;
+    show CalendarStrings, CalendarSystem, Language, NepaliNumerals;
 export 'src/models/nepali_date.dart';
 export 'src/models/nepali_date_range.dart';
 export 'src/models/nepali_holiday.dart';

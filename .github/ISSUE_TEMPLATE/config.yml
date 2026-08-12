@@ -1,0 +1,16 @@
+# Deliberately true. Forcing everyone through a form raises the quality of the
+# reports you get and lowers the number of them — and at this package's size the
+# scarce thing is reports, not structure. Someone who only wants to type one
+# sentence should still be able to.
+blank_issues_enabled: true
+
+contact_links:
+  - name: Question or "how do I…?"
+    url: https://github.com/sarojkhanal51/custom_nepali_calendar/discussions
+    about: >-
+      For usage questions rather than defects. Requires Discussions to be
+      enabled on the repository (Settings → General → Features → Discussions).
+
+  - name: Read the docs first
+    url: https://pub.dev/documentation/custom_nepali_calendar/latest/
+    about: Full API reference for every exported type.

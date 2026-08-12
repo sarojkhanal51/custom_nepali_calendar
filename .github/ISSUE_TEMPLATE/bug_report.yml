@@ -1,0 +1,129 @@
+name: Bug report
+description: Something behaves differently from what the docs say.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. Most bugs in a date picker come down to a
+        specific date meeting a specific set of bounds, so the two fields that
+        matter most are **the exact parameters you passed** and **the exact
+        Bikram Sambat date involved**. With those two, a fix usually takes
+        minutes; without them, it usually takes a round trip.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+      placeholder: |
+        I opened the picker with a window starting today and it came back with
+        a date from last week.
+    validations:
+      required: true
+
+  - type: textarea
+    id: call
+    attributes:
+      label: The call you made
+      description: >-
+        Your `showNepaliCalendar(...)` call or `HorizontalDateStrip(...)`
+        widget, with the real argument values. This is the single most useful
+        thing in the report — most issues turn out to be an interaction
+        between `startDate`, `endDate`/`durationDays`, `selectableDates` and
+        `initialSelection`, so please leave all of them in even if they look
+        irrelevant.
+      render: dart
+      placeholder: |
+        final selection = await showNepaliCalendar(
+          context: context,
+          theme: const NepaliCalendarTheme(),
+          mode: NepaliCalendarMode.single,
+          startDate: NepaliDate(2082, 4, 1),
+          durationDays: 90,
+          selectableDates: <NepaliDate>[NepaliDate(2082, 4, 15)],
+          initialSelection: previousSelection,
+        );
+    validations:
+      required: true
+
+  - type: input
+    id: dates
+    attributes:
+      label: The dates involved
+      description: >-
+        In Bikram Sambat, as `yyyy-MM-dd`. Include the day you picked, the day
+        you got back, and the window's ends if they are not already above.
+      placeholder: "picked 2082-04-20, got back 2082-03-28, window was 2082-04-01 onward"
+    validations:
+      required: true
+
+  - type: input
+    id: package-version
+    attributes:
+      label: Package version
+      description: The `custom_nepali_calendar` version from your pubspec.lock.
+      placeholder: "3.2.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: flutter-version
+    attributes:
+      label: Flutter version
+      description: Paste the output of `flutter --version`.
+      render: console
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: platforms
+    attributes:
+      label: Where it happens
+      options:
+        - label: Android
+        - label: iOS
+        - label: Web
+        - label: Windows
+        - label: macOS
+        - label: Linux
+
+  - type: dropdown
+    id: language
+    attributes:
+      label: Language the calendar was rendering in
+      options:
+        - English
+        - Nepali
+        - Both / not relevant
+    validations:
+      required: true
+
+  - type: dropdown
+    id: system
+    attributes:
+      label: Calendar system on screen when it happened
+      options:
+        - Bikram Sambat (BS)
+        - Gregorian (AD)
+        - Both / not relevant
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: >-
+        Stack trace, screenshot, or a screen recording. Drag files straight
+        into this box.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you file
+      options:
+        - label: I searched the existing issues, open and closed.
+          required: true
+        - label: I am on the latest version, or I have checked the changelog for a fix.
+          required: true

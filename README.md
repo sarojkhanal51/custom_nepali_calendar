@@ -7,7 +7,7 @@ and gets the picked value back.
 Written from scratch — **no third-party dependencies**, no platform channels, no
 native code. Pure Dart and the Flutter SDK, so it runs anywhere Flutter runs.
 
-<img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/v3.1.2/doc/screenshots/single_sheet.png" width="200" alt="Single-date picker open in a bottom sheet"> <img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/v3.1.2/doc/screenshots/range_sheet.png" width="200" alt="Range picker open in a bottom sheet"> <img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/v3.1.2/doc/screenshots/single_center.png" width="200" alt="Single-date picker open as a centred dialog"> <img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/v3.1.2/doc/screenshots/range_center.png" width="200" alt="Range picker open as a centred dialog">
+<img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/develop/doc/screenshots/single_sheet.png" width="200" alt="Single-date picker open in a bottom sheet"> <img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/develop/doc/screenshots/range_sheet.png" width="200" alt="Range picker open in a bottom sheet"> <img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/develop/doc/screenshots/single_center.png" width="200" alt="Single-date picker open as a centred dialog"> <img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/develop/doc/screenshots/range_center.png" width="200" alt="Range picker open as a centred dialog">
 
 ## Features
 
@@ -152,7 +152,7 @@ mode. The centred one drops the drag handle, since there is no drag to hint at.
 For a row that lives on the screen rather than a sheet — today and the next few
 days, with the full calendar one tap away:
 
-<img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/v3.1.2/doc/screenshots/horizontal_strip.png" width="480" alt="HorizontalDateStrip: an inline row of days, with the full calendar one tap away">
+<img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/develop/doc/screenshots/horizontal_strip.png" width="480" alt="HorizontalDateStrip: an inline row of days, with the full calendar one tap away">
 
 ```dart
 HorizontalDateStrip(
@@ -572,6 +572,28 @@ test/
 cd example && flutter run     # Android emulator, iOS simulator or a real device
 flutter test                  # the package
 ```
+
+## Reporting a bug
+
+Bugs and feature requests go to
+[GitHub issues](https://github.com/sarojkhanal51/custom_nepali_calendar/issues) —
+pub.dev has no tracker of its own, so that link is the only way to reach the
+maintainer. There is a form that asks for what is needed; it takes a couple of
+minutes.
+
+Two things make a date-picker bug quick to fix, and without them it usually
+takes a round trip to find out:
+
+* **The call you made**, with real argument values — most reports turn out to
+  be an interaction between `startDate`, `endDate`/`durationDays`,
+  `selectableDates` and `initialSelection`, so leave all of them in even if
+  they look unrelated.
+* **The exact Bikram Sambat dates**, as `yyyy-MM-dd`: the day you picked, the
+  day you got back, and the ends of the window.
+
+For usage questions rather than defects, open a
+[discussion](https://github.com/sarojkhanal51/custom_nepali_calendar/discussions)
+instead.
 
 ## License
 

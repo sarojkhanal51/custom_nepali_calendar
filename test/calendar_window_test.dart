@@ -31,6 +31,19 @@ void main() {
       );
     });
 
+    // Used to be an assert, so in release the two silently collapsed to
+    // endDate and durationDays was dropped without a word.
+    test('rejects an endDate and a durationDays together', () {
+      expect(
+        () => resolveCalendarWindow(
+          startDate: const NepaliDate(2081, 1, 1),
+          endDate: const NepaliDate(2081, 1, 10),
+          durationDays: 30,
+        ),
+        throwsArgumentError,
+      );
+    });
+
     test('accepts a well-ordered endDate', () {
       final NepaliDateRange range = resolveCalendarWindow(
         startDate: const NepaliDate(2081, 1, 1),

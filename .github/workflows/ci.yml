@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+  # So a red main can be caught even in a quiet week.
+  schedule:
+    - cron: '0 6 * * 1'
+
+jobs:
+  verify:
+    name: analyze + test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # The analyzer config treats missing API docs and unused imports as
+      # errors, so this is a real gate rather than a formality.
+      - name: Analyze
+        run: flutter analyze --fatal-infos
+
+      - name: Check formatting
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Test
+        run: flutter test
+
+      - name: Example builds and its smoke test passes
+        working-directory: example
+        run: |
+          flutter pub get
+          flutter test
+
+      # Catches the pubspec/README/CHANGELOG problems that only surface at
+      # publish time — the ones that have historically shipped broken.
+      - name: Publish dry run
+        run: dart pub publish --dry-run
