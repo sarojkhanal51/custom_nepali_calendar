@@ -27,6 +27,7 @@ class CalendarDay {
     this.isRangeEnd = false,
     this.isInRange = false,
     this.holidayColor,
+    this.highlightColor,
   });
 
   /// The day in Bikram Sambat.
@@ -68,6 +69,11 @@ class CalendarDay {
   /// holiday. Null when the day is not a holiday.
   final Color? holidayColor;
 
+  /// The color this day is marked in, when it came from a `selectableDates`
+  /// group that carries one. Null when the day is unmarked — or when it is
+  /// disabled, since a day the window rules out is not on offer to mark.
+  final Color? highlightColor;
+
   /// Whether this day is a Saturday — the Nepali weekend.
   bool get isWeekend => weekdayIndex == 6;
 
@@ -106,6 +112,12 @@ class DayCell extends StatelessWidget {
 
   /// Called when the cell is tapped. A null callback renders the cell inert.
   final VoidCallback? onTap;
+
+  /// How much of a marked day's color washes the cell behind the number.
+  ///
+  /// Low enough that the day number stays readable in that same color, and
+  /// that the border rather than the fill is what carries the mark.
+  static const double _highlightFillOpacity = 0.14;
 
   bool get _isEnd => day.isRangeStart || day.isRangeEnd;
 
@@ -213,6 +225,19 @@ class DayCell extends StatelessWidget {
         borderRadius: radius,
       );
     }
+    // A marked day: bright in the caller's color at the edge, light in the
+    // middle, so it reads as on offer without competing with the selection.
+    // Above today's ring deliberately — the caller asked for this color on
+    // this day, and today is still legible through its bold number.
+    final Color? highlight = day.highlightColor;
+    if (highlight != null) {
+      return BoxDecoration(
+        color: highlight.withValues(alpha: _highlightFillOpacity),
+        shape: theme.dayCellShape,
+        borderRadius: radius,
+        border: Border.all(color: highlight, width: 1.5),
+      );
+    }
     if (day.isToday) {
       return BoxDecoration(
         shape: theme.dayCellShape,
@@ -235,6 +260,12 @@ class DayCell extends StatelessWidget {
     }
     if (day.holidayColor != null) {
       return day.holidayColor!;
+    }
+    // Below the holiday color on purpose: a marked day that is also a holiday
+    // keeps its holiday number and shows the mark through border and fill, so
+    // neither signal is lost on a day that carries both.
+    if (day.highlightColor != null) {
+      return day.highlightColor!;
     }
     if (day.isWeekend) {
       return theme.weekendColor;

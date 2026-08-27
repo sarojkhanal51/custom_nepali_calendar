@@ -39,7 +39,9 @@ Future<List<NepaliDate>> _pump(
               startDate: startDate,
               endDate: endDate,
               durationDays: durationDays,
-              selectableDates: selectableDates,
+              selectableDates: selectableDates == null
+                  ? null
+                  : <SelectableDates>[SelectableDates(dates: selectableDates)],
               language: language,
               system: system,
               showCalendarButton: showCalendarButton,

@@ -62,9 +62,16 @@ void main() {
     await tester.pumpWidget(const ExampleApp());
     await tester.pumpAndSettle();
 
+    // The demo page is taller than the 800x600 test window and the language
+    // toggle sits at the very end of it, so it has to be scrolled to first.
+    await tester.ensureVisible(find.text('नेपाली'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('नेपाली'));
     await tester.pumpAndSettle();
 
+    // Scrolling to the toggle left the button off the top of the window.
+    await tester.ensureVisible(find.text('Pick a date'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Pick a date'));
     await tester.pumpAndSettle();
     expect(find.text('ठीक छ'), findsOneWidget);

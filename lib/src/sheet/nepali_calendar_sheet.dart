@@ -4,11 +4,12 @@ library;
 import 'package:flutter/material.dart';
 
 import '../data/day_selectability.dart';
-import '../data/selectable_dates.dart';
+import '../data/selectable_date_lookup.dart';
 import '../localization/calendar_strings.dart';
 import '../models/nepali_date.dart';
 import '../models/nepali_date_range.dart';
 import '../models/nepali_holiday.dart';
+import '../models/selectable_dates.dart';
 import '../theme/nepali_calendar_theme.dart';
 import '../view/calendar_controller.dart';
 import '../view/calendar_view.dart';
@@ -175,6 +176,18 @@ class NepaliCalendarSelection {
 ///   whatever [startDate]/[endDate]/[durationDays] already restrict, not
 ///   instead of it. Useful for e.g. a fixed set of available appointment
 ///   slots. Null (the default) means no extra restriction.
+///
+///   It is a list of [SelectableDates] groups rather than a flat list of days,
+///   so each group can carry its own [SelectableDates.color]: pass one group
+///   per category — free slots in green, held ones in amber — and each day is
+///   marked with a bright border in its color and a light wash of it behind
+///   the number. A group with no color restricts without marking. Days can be
+///   given in either calendar: [SelectableDates] takes Bikram Sambat
+///   [NepaliDate]s and [SelectableDates.fromDateTimes] takes Gregorian
+///   `DateTime`s, and both mark correctly whichever calendar the sheet is
+///   showing. Once the user picks a marked day it is painted in the theme's
+///   selected color like any other selection — the mark says "available",
+///   the fill says "chosen", and the two never look alike.
 /// * [confirmLabel] and [cancelLabel] override the button text.
 /// * [showClearButton] allows a Clear button beside Cancel/Done — off by
 ///   default, and even when `true` it only appears when the sheet opened on
@@ -218,7 +231,7 @@ Future<NepaliCalendarSelection?> showNepaliCalendar({
   int? durationDays,
   bool showSystemSwitch = true,
   List<NepaliHoliday> holidays = const <NepaliHoliday>[],
-  List<NepaliDate>? selectableDates,
+  List<SelectableDates>? selectableDates,
   NepaliCalendarSelection? initialSelection,
   bool isDismissible = false,
   bool showClearButton = false,
@@ -310,7 +323,7 @@ class _CalendarSheet extends StatefulWidget {
   final NepaliDateRange? allowedRange;
   final bool showSystemSwitch;
   final List<NepaliHoliday> holidays;
-  final List<NepaliDate>? selectableDates;
+  final List<SelectableDates>? selectableDates;
   final NepaliCalendarSelection? initialSelection;
   final bool showDragHandle;
   final bool showClearButton;
@@ -345,9 +358,9 @@ class _CalendarSheetState extends State<_CalendarSheet> {
     if (selection == null || selection.isCleared) {
       return null;
     }
-    final Set<NepaliDate>? allowed = toSelectableDateSet(
+    final Set<NepaliDate>? allowed = resolveSelectableDates(
       widget.selectableDates,
-    );
+    ).allowed;
     bool selectable(NepaliDate date) => isDaySelectable(
       date,
       startDate: widget.allowedRange?.start,

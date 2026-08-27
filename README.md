@@ -7,7 +7,7 @@ and gets the picked value back.
 Written from scratch — **no third-party dependencies**, no platform channels, no
 native code. Pure Dart and the Flutter SDK, so it runs anywhere Flutter runs.
 
-<img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/develop/doc/screenshots/single_sheet.png" width="200" alt="Single-date picker open in a bottom sheet"> <img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/develop/doc/screenshots/range_sheet.png" width="200" alt="Range picker open in a bottom sheet"> <img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/develop/doc/screenshots/single_center.png" width="200" alt="Single-date picker open as a centred dialog"> <img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/develop/doc/screenshots/range_center.png" width="200" alt="Range picker open as a centred dialog">
+<img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/develop/doc/screenshots/single_sheet.png" width="200" alt="Single-date picker open in a bottom sheet"> <img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/develop/doc/screenshots/range_sheet.png" width="200" alt="Range picker open in a bottom sheet"> <img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/develop/doc/screenshots/single_center.png" width="200" alt="Single-date picker open as a centred dialog"> <img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/develop/doc/screenshots/range_center.png" width="200" alt="Range picker open as a centred dialog"> <img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/develop/doc/screenshots/selectable_slots.png" width="200" alt="Selectable dates marked in their own colours">
 
 ## Features
 
@@ -27,7 +27,9 @@ Everything below is in the code — nothing aspirational.
   fiscal year capped at today while it's current, fully open once it's past
   (recipe below)
 - ✅ `selectableDates`: restrict to an exact list of days — e.g. fixed
-  appointment slots — on top of the window, sheet and strip alike
+  appointment slots — on top of the window, sheet and strip alike, with each
+  group of days optionally **marked in its own colour**, given in either
+  calendar (BS or AD)
 - ✅ Optional Clear button (`showClearButton`) that resolves distinctly from
   Cancel, so removing a value and backing out are never confused
 - ✅ `initialSelection` reopens the sheet with a previous pick already
@@ -78,7 +80,7 @@ Everything below is in the code — nothing aspirational.
 - ✅ Fixed six-week grid, so the sheet never changes height while swiping
 - ✅ Rebuilds only recompute what actually changed — tapping a day or
   swiping a month doesn't re-render cells that didn't change
-- ✅ 234 tests covering conversion, the widget and the layout
+- ✅ 339 tests covering conversion, the widget and the layout
 
 ## Install
 
@@ -90,7 +92,7 @@ or in `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  custom_nepali_calendar: ^3.0.0
+  custom_nepali_calendar: ^4.0.0
 ```
 
 ## Use
@@ -129,6 +131,22 @@ if (selection != null) {
   print(range.lengthInDays);                // 11, both ends counted
   print(selection.dateTimeRange);           // Gregorian DateTimeRange
 }
+```
+
+```dart
+// 3. Only certain days, each group in its own colour
+final selection = await showNepaliCalendar(
+  context: context,
+  theme: myCalendarTheme,
+  startDate: NepaliDate.now(),
+  durationDays: 30,
+  selectableDates: <SelectableDates>[
+    SelectableDates(dates: freeDays, color: const Color(0xFF2F9E44)),   // NepaliDate list
+    SelectableDates.fromDateTimes(dates: heldDays, color: Colors.amber), // DateTime list
+  ],
+);
+// Every other day in the window is disabled, so this can only ever
+// resolve to a day you offered.
 ```
 
 ### Where it appears
@@ -185,7 +203,7 @@ what you hold never disagree.
 | `language` | `.english` | |
 | `system` | `.bs` | the chips show that calendar only |
 | `holidays` | `[]` | dates painted in their own colour, also passed to the calendar it opens |
-| `selectableDates` | `null` | only these days pickable, also passed to the calendar it opens |
+| `selectableDates` | `null` | `List<SelectableDates>` — only these days pickable, each group optionally marked in its colour; also passed to the calendar it opens |
 | `showCalendarButton` | `true` | the trailing button |
 | `height` | `60` | chips scale to fit |
 
@@ -249,11 +267,15 @@ await showNepaliCalendar(
   the window.
 * Holding Gregorian dates? `NepaliDate.fromDateTime(myDateTime)`.
 
-### Restricting to specific dates
+### Restricting to specific dates — and colouring them
 
 `selectableDates` narrows the window further, down to an exact list — every
-other day is disabled, even ones inside `startDate`/`endDate`. Good for a
-fixed set of available slots, e.g. appointment availability from a server:
+other day is disabled, even ones inside `startDate`/`endDate`. It takes a list
+of `SelectableDates` groups, so each group can carry its own colour: one group
+per category, and every day in it is **marked** with a bright border in that
+colour over a light wash of it. Good for appointment availability, where the
+days differ not only in whether they can be booked but in what kind of day
+they are:
 
 ```dart
 await showNepaliCalendar(
@@ -261,19 +283,66 @@ await showNepaliCalendar(
   theme: myTheme,
   startDate: NepaliDate.now(),
   endDate: NepaliDate.now().addDays(30),
-  selectableDates: <NepaliDate>[
-    const NepaliDate(2083, 4, 3),
-    const NepaliDate(2083, 4, 7),
-    const NepaliDate(2083, 4, 12),
+  selectableDates: <SelectableDates>[
+    // Plenty of room — green.
+    const SelectableDates(
+      dates: <NepaliDate>[
+        NepaliDate(2083, 4, 3),
+        NepaliDate(2083, 4, 7),
+      ],
+      color: Color(0xFF2F9E44),
+    ),
+    // Nearly full — amber.
+    const SelectableDates(
+      dates: <NepaliDate>[NepaliDate(2083, 4, 12)],
+      color: Color(0xFFF08C00),
+    ),
   ],
 );
 ```
 
+**Either calendar.** `SelectableDates` takes Bikram Sambat `NepaliDate`s;
+`SelectableDates.fromDateTimes` takes Gregorian `DateTime`s and converts them
+for you. Mix both in one list if that is what your data looks like — a group
+marks the same day whichever calendar the sheet is currently showing, and the
+mark survives a live BS/AD switch:
+
+```dart
+selectableDates: <SelectableDates>[
+  SelectableDates.fromDateTimes(
+    dates: <DateTime>[DateTime(2026, 8, 29), DateTime(2026, 9, 2)],
+    color: const Color(0xFF2F9E44),
+  ),
+],
+```
+
+<img src="https://raw.githubusercontent.com/sarojkhanal51/custom_nepali_calendar/develop/doc/screenshots/selectable_slots.png" width="260" alt="Selectable dates marked in their own colours: bookable days bordered in green and amber, everything else disabled">
+
+**Selection always wins.** The mark says *available*; the theme's
+`selectedDayColor` says *chosen*. The moment the user taps a marked day it is
+filled like any other selection, so the two never look alike — and the mark
+comes back if the pick moves elsewhere.
+
+**Colour is optional.** A group with no `color` restricts what can be picked
+without changing how those days look, which is the plain allow-list:
+
+```dart
+selectableDates: <SelectableDates>[
+  const SelectableDates(dates: <NepaliDate>[NepaliDate(2083, 4, 3)]),
+],
+```
+
 A day must satisfy **both** the window and the list to be pickable — pass
 just `selectableDates` with an unbounded window (no `endDate`/`durationDays`)
-if the list alone should decide. `HorizontalDateStrip` takes the same
-parameter and forwards it into the calendar its button opens, same as
-`holidays`. The parameter takes `NepaliDate` values, not strings — parse any
+if the list alone should decide. A day the window already rules out is never
+marked: it is not on offer, so colouring it would be a lie. When two groups
+list the same day, the later one wins its colour. An empty list disables every
+day rather than allowing all — a list you computed that came back empty means
+"no slots", and that is what you see.
+
+`HorizontalDateStrip` takes the same parameter, marks its chips the same way,
+and forwards it into the calendar its button opens, same as `holidays`. The
+dates are `NepaliDate`/`DateTime` values, not strings — parse any
 server-supplied dates yourself first, same as the fiscal-year recipe below.
 
 ### Nepali fiscal year windows
@@ -427,7 +496,8 @@ await showNepaliCalendar(
 
   showSystemSwitch: true,                   // the BS/AD toggle in the header
   holidays: <NepaliHoliday>[...],           // dates painted in their own colour
-  selectableDates: <NepaliDate>[...],       // only these days pickable, on top of the window
+  selectableDates: <SelectableDates>[...],  // only these days pickable, on top of the window,
+                                            // each group optionally marked in its own colour
   initialSelection: lastPicked,             // preselects it and opens on its month
   isDismissible: false,                     // default; true allows tap-outside
 

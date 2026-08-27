@@ -25,6 +25,8 @@ const int daysPerWeek = 7;
 /// [startDate] and [endDate] mark days outside the caller's window as disabled.
 /// [selectableDates], when given, additionally disables any day not in it —
 /// a day must satisfy both the window and the allow-list to be selectable.
+/// [selectableColors] marks the days the caller gave a color to; a day the
+/// window disabled is never marked, since it is not on offer.
 ///
 /// A `null` entry renders an empty cell, which happens only at the very edges of
 /// the range the BS table can represent.
@@ -40,6 +42,7 @@ List<CalendarDay?> buildMonthDays({
   NepaliDate? startDate,
   NepaliDate? endDate,
   Set<NepaliDate>? selectableDates,
+  Map<NepaliDate, Color>? selectableColors,
   Map<NepaliDate, Color>? holidayColors,
 }) {
   final int firstDayNumber = system == CalendarSystem.bs
@@ -66,6 +69,12 @@ List<CalendarDay?> buildMonthDays({
     }
 
     final NepaliDate bsDate = DateConverter.adToBs(adDate);
+    final bool isDisabled = !isDaySelectable(
+      bsDate,
+      startDate: startDate,
+      endDate: endDate,
+      selectableDates: selectableDates,
+    );
     days.add(
       CalendarDay(
         bsDate: bsDate,
@@ -76,16 +85,12 @@ List<CalendarDay?> buildMonthDays({
             : adDate.year == year && adDate.month == month,
         isToday: bsDate == today,
         isSelected: selectedDate != null && bsDate == selectedDate,
-        isDisabled: !isDaySelectable(
-          bsDate,
-          startDate: startDate,
-          endDate: endDate,
-          selectableDates: selectableDates,
-        ),
+        isDisabled: isDisabled,
         isRangeStart: range != null && bsDate == range.start,
         isRangeEnd: range != null && bsDate == range.end,
         isInRange: range != null && range.contains(bsDate),
         holidayColor: holidayColors?[bsDate],
+        highlightColor: isDisabled ? null : selectableColors?[bsDate],
       ),
     );
   }

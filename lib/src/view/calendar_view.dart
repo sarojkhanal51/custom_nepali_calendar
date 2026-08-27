@@ -8,11 +8,12 @@ import '../converters/date_converter.dart';
 import '../data/bs_calendar_data.dart';
 import '../data/day_selectability.dart';
 import '../data/holiday_lookup.dart';
-import '../data/selectable_dates.dart';
+import '../data/selectable_date_lookup.dart';
 import '../localization/calendar_strings.dart';
 import '../models/nepali_date.dart';
 import '../models/nepali_date_range.dart';
 import '../models/nepali_holiday.dart';
+import '../models/selectable_dates.dart';
 import '../theme/nepali_calendar_theme.dart';
 import '../util/today_cache.dart';
 import 'calendar_controller.dart';
@@ -54,10 +55,10 @@ class CalendarView extends StatefulWidget {
   /// Days painted in a caller-chosen color, e.g. an organization's holidays.
   final List<NepaliHoliday> holidays;
 
-  /// When given, only these days are selectable — every other day inside
-  /// [allowedRange] is disabled too. Null means no restriction beyond the
-  /// window.
-  final List<NepaliDate>? selectableDates;
+  /// When given, only the days in these groups are selectable — every other
+  /// day inside [allowedRange] is disabled too. A group carrying a color also
+  /// marks its days. Null means no restriction beyond the window.
+  final List<SelectableDates>? selectableDates;
 
   /// Whether each cell shows the other calendar's day number underneath.
   final bool showAlternateDate;
@@ -79,7 +80,7 @@ class _CalendarViewState extends State<CalendarView> {
   late Map<NepaliDate, Color> _holidayColors = resolveHolidayColors(
     widget.holidays,
   );
-  late Set<NepaliDate>? _selectableDateSet = toSelectableDateSet(
+  late SelectableDateLookup _selectable = resolveSelectableDates(
     widget.selectableDates,
   );
   final Map<_MonthDaysKey, List<CalendarDay?>> _monthDaysCache =
@@ -120,7 +121,7 @@ class _CalendarViewState extends State<CalendarView> {
       _monthDaysCache.clear();
     }
     if (!listEquals(widget.selectableDates, oldWidget.selectableDates)) {
-      _selectableDateSet = toSelectableDateSet(widget.selectableDates);
+      _selectable = resolveSelectableDates(widget.selectableDates);
       _monthDaysCache.clear();
     }
   }
@@ -241,7 +242,7 @@ class _CalendarViewState extends State<CalendarView> {
       today,
       startDate: widget.allowedRange?.start,
       endDate: widget.allowedRange?.end,
-      selectableDates: _selectableDateSet,
+      selectableDates: _selectable.allowed,
     )) {
       return widget.controller.goToToday;
     }
@@ -361,7 +362,8 @@ class _CalendarViewState extends State<CalendarView> {
                   rangeEnd: controller.rangeEnd,
                   startDate: widget.allowedRange?.start,
                   endDate: widget.allowedRange?.end,
-                  selectableDates: _selectableDateSet,
+                  selectableDates: _selectable.allowed,
+                  selectableColors: _selectable.colors,
                   holidayColors: _holidayColors,
                 ),
               );

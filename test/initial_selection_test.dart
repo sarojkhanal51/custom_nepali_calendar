@@ -43,7 +43,11 @@ Future<List<NepaliCalendarSelection?>> _open(
                 startDate: startDate,
                 endDate: endDate,
                 durationDays: durationDays,
-                selectableDates: selectableDates,
+                selectableDates: selectableDates == null
+                    ? null
+                    : <SelectableDates>[
+                        SelectableDates(dates: selectableDates),
+                      ],
                 initialSelection: initialSelection,
                 showClearButton: showClearButton,
               ),

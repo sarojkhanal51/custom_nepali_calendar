@@ -1,3 +1,80 @@
+## 4.0.0
+
+`selectableDates` grew a colour. It used to be a flat list of days that were
+pickable and looked like every other day; it is now a list of groups, each of
+which can mark its days in a colour of its own. One breaking signature change,
+described under Migration below — everything else about the parameter behaves
+as it did.
+
+### Changed
+
+* **`selectableDates` now takes `List<SelectableDates>` instead of
+  `List<NepaliDate>`**, on `showNepaliCalendar` and `HorizontalDateStrip`
+  alike. A `SelectableDates` group is a list of days plus an optional colour,
+  the same shape `NepaliHoliday` already uses, so one list can carry several
+  categories at once: free slots in green, nearly-full ones in amber,
+  blackout-adjacent ones in red. Everything the parameter already did — a day
+  must clear both the window and the list, an empty list disables every day,
+  `initialSelection` is validated against it, the strip forwards it into the
+  calendar its button opens — is unchanged.
+
+### Added
+
+* **Marked days.** A group carrying a `SelectableDates.color` draws its days
+  with a bright 1.5px border in that colour over a light wash of it, and the
+  day number in the same colour. An available day now reads as available at a
+  glance rather than only by being tappable, and two kinds of available day
+  are told apart without a legend. A group with no colour restricts without
+  marking, which is exactly the old behaviour.
+
+* **Selection outranks the mark.** Tapping a marked day paints it in the
+  theme's `selectedDayColor` like any other pick, and the mark returns if the
+  selection moves elsewhere. The mark says *available*, the fill says
+  *chosen*, and the two never look alike — which is the whole reason the mark
+  is a border-and-wash rather than a solid fill.
+
+* **Days in either calendar.** `SelectableDates` takes Bikram Sambat
+  `NepaliDate`s and `SelectableDates.fromDateTimes` takes Gregorian
+  `DateTime`s, converting them on the way in. Both forms can appear in the
+  same list. Because groups resolve to BS days internally, a mark follows the
+  day rather than the calendar it is shown in: it lands on the same cell
+  whether the sheet opened in BS or AD, and survives a live switch between
+  them.
+
+* **The strip marks its chips too**, with the same border and wash, so a day
+  looks the same in the strip as it does in the calendar the strip opens.
+
+* A `SelectableDates` group is a value: two groups with the same days and
+  colour are equal, which is what lets the sheet and the strip skip the
+  rebuild when a caller hands them a freshly-constructed but identical list.
+
+* The example app gained an **appointment-slot** demo — two colour-coded
+  groups driving a strip and a sheet from one list, one built from
+  `NepaliDate`s and one from `DateTime`s.
+
+### Migration
+
+A plain allow-list becomes a single group with no colour:
+
+```dart
+// 3.x
+selectableDates: <NepaliDate>[a, b, c],
+
+// 4.0
+selectableDates: <SelectableDates>[SelectableDates(dates: <NepaliDate>[a, b, c])],
+```
+
+Add `color:` to that group — or split it into several — to have the days
+marked. Nothing else in the API changed, so this is the only edit a 3.x caller
+needs.
+
+### Precedence, for the record
+
+A day can carry more than one signal at once. Selected beats everything. Below
+that, a marked day keeps its border and wash; if it is also a holiday, the
+holiday keeps the number's colour, so a holiday inside an available day still
+shows as one. A day the window disabled is never marked.
+
 ## 3.2.0
 
 A correctness release. Four of these let a picker resolve to a day the

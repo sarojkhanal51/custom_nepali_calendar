@@ -49,6 +49,7 @@ class _DemoScreenState extends State<DemoScreen> {
 
   String _result = 'Nothing picked yet';
   String _fiscalResult = 'Nothing picked yet';
+  String _slotResult = 'Nothing picked yet';
   Language _language = Language.english;
   NepaliDate? _stripDate;
 
@@ -58,6 +59,13 @@ class _DemoScreenState extends State<DemoScreen> {
 
   /// Same idea as [_lastSingleSelection], for _pickRange.
   NepaliCalendarSelection? _lastRangeSelection;
+
+  /// The slot the appointment strip opens on — the first bookable day.
+  ///
+  /// Seeded rather than left null for the same reason [_fiscalStripDate] is:
+  /// this demo already knows the sensible default, so the strip has no need to
+  /// pick one and report it back.
+  late NepaliDate _slotDate = _slots.first.dates.first;
 
   /// Pre-resolved rather than left null, so the strip doesn't fire its own
   /// default-selection report on first build — this demo section already
@@ -76,6 +84,37 @@ class _DemoScreenState extends State<DemoScreen> {
       type: 'Optional',
       dates: <NepaliDate>[NepaliDate.now().addDays(20)],
       color: const Color(0xFF2F9E44),
+    ),
+  ];
+
+  /// The days an appointment can be booked on, in two colours: green for a day
+  /// with room, amber for one that is nearly full. Everything not listed here
+  /// is unpickable, so the calendar can only ever hand back a real slot.
+  ///
+  /// The amber group is built from Gregorian `DateTime`s and the green one
+  /// from [NepaliDate]s on purpose — a caller holding either calendar's dates
+  /// passes them straight in, and both mark the same way.
+  late final List<SelectableDates> _slots = <SelectableDates>[
+    SelectableDates(
+      dates: <int>[
+        1,
+        2,
+        3,
+        8,
+        9,
+        10,
+        16,
+        17,
+        23,
+        24,
+      ].map(NepaliDate.now().addDays).toList(growable: false),
+      color: const Color(0xFF2F9E44),
+    ),
+    SelectableDates.fromDateTimes(
+      dates: <int>[5, 6, 12, 19, 26]
+          .map((int days) => DateTime.now().add(Duration(days: days)))
+          .toList(growable: false),
+      color: const Color(0xFFF08C00),
     ),
   ];
 
@@ -153,6 +192,35 @@ class _DemoScreenState extends State<DemoScreen> {
           'AD: ${range.toDateTimeRange().start.toIso8601String().split('T').first}'
           ' → '
           '${range.toDateTimeRange().end.toIso8601String().split('T').first}';
+    });
+  }
+
+  /// Opens the calendar on the bookable days only — see [_slots].
+  ///
+  /// Marked days are bordered in their group's colour with a light wash
+  /// behind the number; every other day in the 30-day window is greyed out.
+  /// Tapping one paints it in the theme's selected colour like any other pick.
+  Future<void> _pickSlot() async {
+    final NepaliCalendarSelection? selection = await showNepaliCalendar(
+      context: context,
+      theme: _theme,
+      language: _language,
+      startDate: NepaliDate.now(),
+      durationDays: 30,
+      selectableDates: _slots,
+    );
+
+    setState(() {
+      if (selection?.date == null) {
+        _slotResult = 'Slot: cancelled';
+        return;
+      }
+      final NepaliDate date = selection!.date!;
+      _slotDate = date;
+      _slotResult =
+          'Slot booked\n'
+          'BS: ${date.format('EEEE, d MMMM yyyy')}\n'
+          'AD: ${date.toDateTime().toIso8601String().split('T').first}';
     });
   }
 
@@ -243,6 +311,46 @@ class _DemoScreenState extends State<DemoScreen> {
                         'BS: ${date.format('EEEE, d MMMM yyyy')}\n'
                         'AD: ${date.toDateTime().toIso8601String().split('T').first}';
                   }),
+                ),
+                const SizedBox(height: 24),
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Appointment slots',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                // The same _slots list drives the strip and the sheet, so a
+                // day is marked identically wherever it shows up.
+                HorizontalDateStrip(
+                  theme: _theme,
+                  language: _language,
+                  startDate: NepaliDate.now(),
+                  dayCount: 7,
+                  durationDays: 30,
+                  selectableDates: _slots,
+                  selectedDate: _slotDate,
+                  onDateSelected: (NepaliDate date) => setState(() {
+                    _slotDate = date;
+                    _slotResult =
+                        'Slot booked\n'
+                        'BS: ${date.format('EEEE, d MMMM yyyy')}\n'
+                        'AD: ${date.toDateTime().toIso8601String().split('T').first}';
+                  }),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _pickSlot,
+                  icon: const Icon(Icons.event_available),
+                  label: const Text('See every slot'),
+                ),
+                const SizedBox(height: 8),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: SelectableText(_slotResult),
+                  ),
                 ),
                 const SizedBox(height: 24),
                 const Align(

@@ -7,11 +7,12 @@ import 'package:flutter/material.dart';
 import '../data/bs_calendar_data.dart';
 import '../data/day_selectability.dart';
 import '../data/holiday_lookup.dart';
-import '../data/selectable_dates.dart';
+import '../data/selectable_date_lookup.dart';
 import '../localization/calendar_strings.dart';
 import '../models/nepali_date.dart';
 import '../models/nepali_date_range.dart';
 import '../models/nepali_holiday.dart';
+import '../models/selectable_dates.dart';
 import '../sheet/calendar_window.dart';
 import '../sheet/nepali_calendar_sheet.dart';
 import '../theme/nepali_calendar_theme.dart';
@@ -101,10 +102,18 @@ class HorizontalDateStrip extends StatefulWidget {
   /// Applied to both the strip's chips and the full calendar opened from it.
   final List<NepaliHoliday> holidays;
 
-  /// When given, only these days are selectable — every other day inside the
-  /// strip's window is disabled too, on the chips and in the calendar its
-  /// button opens alike. Null means no restriction beyond the window.
-  final List<NepaliDate>? selectableDates;
+  /// When given, only the days in these groups are selectable — every other
+  /// day inside the strip's window is disabled too, on the chips and in the
+  /// calendar its button opens alike. Null means no restriction beyond the
+  /// window.
+  ///
+  /// A group carrying a [SelectableDates.color] also marks its days: the chip
+  /// takes a bright border in that color over a light wash of it, and so does
+  /// the day in the calendar the trailing button opens. Selecting the day
+  /// replaces the mark with the theme's selected fill. Days may be given as
+  /// Bikram Sambat [NepaliDate]s or, via [SelectableDates.fromDateTimes], as
+  /// Gregorian `DateTime`s.
+  final List<SelectableDates>? selectableDates;
 
   /// Whether to show the trailing button that opens the full calendar.
   final bool showCalendarButton;
@@ -135,7 +144,7 @@ class _HorizontalDateStripState extends State<HorizontalDateStrip> {
   late Map<NepaliDate, Color> _holidayColors = resolveHolidayColors(
     widget.holidays,
   );
-  late Set<NepaliDate>? _selectableDateSet = toSelectableDateSet(
+  late SelectableDateLookup _selectable = resolveSelectableDates(
     widget.selectableDates,
   );
 
@@ -197,7 +206,7 @@ class _HorizontalDateStripState extends State<HorizontalDateStrip> {
     date,
     startDate: _window.start,
     endDate: _window.end,
-    selectableDates: _selectableDateSet,
+    selectableDates: _selectable.allowed,
   );
 
   /// What to paint as selected: the caller's value, or the day defaulted to.
@@ -213,7 +222,7 @@ class _HorizontalDateStripState extends State<HorizontalDateStrip> {
       _holidayColors = resolveHolidayColors(widget.holidays);
     }
     if (!listEquals(widget.selectableDates, oldWidget.selectableDates)) {
-      _selectableDateSet = toSelectableDateSet(widget.selectableDates);
+      _selectable = resolveSelectableDates(widget.selectableDates);
     }
     if (widget.startDate != oldWidget.startDate ||
         widget.endDate != oldWidget.endDate ||
@@ -321,6 +330,9 @@ class _HorizontalDateStripState extends State<HorizontalDateStrip> {
                 isToday: day == today,
                 isDisabled: !_isSelectable(day),
                 holidayColor: _holidayColors[day],
+                highlightColor: _isSelectable(day)
+                    ? _selectable.colors[day]
+                    : null,
                 onTap: () => widget.onDateSelected(day),
               ),
             ),
@@ -342,6 +354,7 @@ class _DayChip extends StatelessWidget {
     required this.isToday,
     required this.isDisabled,
     this.holidayColor,
+    this.highlightColor,
     required this.onTap,
   });
 
@@ -353,7 +366,12 @@ class _DayChip extends StatelessWidget {
   final bool isToday;
   final bool isDisabled;
   final Color? holidayColor;
+  final Color? highlightColor;
   final VoidCallback onTap;
+
+  /// How much of a marked day's color washes the chip behind the date.
+  /// Matches the calendar cell, so the strip and the sheet read as one thing.
+  static const double _markFillOpacity = 0.14;
 
   /// The month this day belongs to, abbreviated.
   String _monthLabel() {
@@ -369,12 +387,17 @@ class _DayChip extends StatelessWidget {
       ? theme.disabledDayColor
       : holidayColor != null
       ? holidayColor!
+      : highlightColor != null
+      ? highlightColor!
       : date.isSaturday
       ? theme.weekendColor
       : theme.weekdayHeaderColor;
 
   @override
   Widget build(BuildContext context) {
+    // Only an offerable, unselected day carries the mark: a disabled day is
+    // not on offer, and a selected one has the theme's fill instead.
+    final Color? mark = isSelected || isDisabled ? null : highlightColor;
     final int dayNumber = system == CalendarSystem.bs
         ? date.day
         : date.toDateTime().day;
@@ -384,6 +407,8 @@ class _DayChip extends StatelessWidget {
         ? theme.disabledDayColor
         : holidayColor != null
         ? holidayColor!
+        : highlightColor != null
+        ? highlightColor!
         : date.isSaturday
         ? theme.weekendColor
         : theme.textColor;
@@ -396,8 +421,20 @@ class _DayChip extends StatelessWidget {
       child: Padding(
         padding: EdgeInsets.all(theme.cellSpacing),
         child: Material(
-          color: isSelected ? theme.selectedDayColor : Colors.transparent,
-          borderRadius: BorderRadius.circular(theme.borderRadius),
+          // A marked day is bright at the edge and light in the middle, the
+          // same as its cell in the calendar — until it is selected, where the
+          // theme's fill takes over so the pick is never in doubt.
+          color: isSelected
+              ? theme.selectedDayColor
+              : mark == null
+              ? Colors.transparent
+              : mark.withValues(alpha: _markFillOpacity),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(theme.borderRadius),
+            side: mark == null
+                ? BorderSide.none
+                : BorderSide(color: mark, width: 1.5),
+          ),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: isDisabled ? null : onTap,

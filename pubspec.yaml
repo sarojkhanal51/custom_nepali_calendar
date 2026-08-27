@@ -1,9 +1,9 @@
 name: custom_nepali_calendar
 description: >-
-  Nepali Bikram Sambat calendar and date picker in a bottom sheet: single date
-  or range, custom theme colours, live BS/AD switch, Nepali or English. No
-  dependencies.
-version: 3.2.0
+  Nepali Bikram Sambat calendar and date picker: single date or range,
+  selectable dates marked in your own colours, a live BS/AD switch, Nepali or
+  English labels. No dependencies.
+version: 4.0.0
 repository: https://github.com/sarojkhanal51/custom_nepali_calendar
 issue_tracker: https://github.com/sarojkhanal51/custom_nepali_calendar/issues
 
@@ -29,6 +29,10 @@ screenshots:
   - description: >-
       Range picker open as a centred dialog.
     path: doc/screenshots/range_center.png
+  - description: >-
+      Selectable dates marked in their own colours: bookable days bordered in
+      green and amber, everything else disabled.
+    path: doc/screenshots/selectable_slots.png
   - description: >-
       HorizontalDateStrip: an inline row of days, with the full calendar one
       tap away.

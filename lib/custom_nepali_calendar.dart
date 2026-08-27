@@ -25,6 +25,12 @@
 /// which convert to Gregorian `DateTime` on demand; [DateConverter] exposes the
 /// same conversion for use without any UI.
 ///
+/// Two parameters take caller-supplied days and paint them: [NepaliHoliday]
+/// marks holidays in their own colour, and [SelectableDates] restricts the
+/// calendar to an exact set of days — appointment slots, say — with each group
+/// optionally marked in a colour of its own. Days for either can be given in
+/// Bikram Sambat or, via [SelectableDates.fromDateTimes], in Gregorian.
+///
 /// Everything else is internal to the package.
 library;
 
@@ -35,6 +41,7 @@ export 'src/localization/calendar_strings.dart'
 export 'src/models/nepali_date.dart';
 export 'src/models/nepali_date_range.dart';
 export 'src/models/nepali_holiday.dart';
+export 'src/models/selectable_dates.dart';
 export 'src/sheet/nepali_calendar_sheet.dart'
     show
         NepaliCalendarMode,
