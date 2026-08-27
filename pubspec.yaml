@@ -3,7 +3,7 @@ description: >-
   Nepali Bikram Sambat calendar and date picker: single date or range,
   selectable dates marked in your own colours, a live BS/AD switch, Nepali or
   English labels. No dependencies.
-version: 4.0.0
+version: 4.0.1
 repository: https://github.com/sarojkhanal51/custom_nepali_calendar
 issue_tracker: https://github.com/sarojkhanal51/custom_nepali_calendar/issues
 
