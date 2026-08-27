@@ -80,7 +80,7 @@ Everything below is in the code — nothing aspirational.
 - ✅ Fixed six-week grid, so the sheet never changes height while swiping
 - ✅ Rebuilds only recompute what actually changed — tapping a day or
   swiping a month doesn't re-render cells that didn't change
-- ✅ 339 tests covering conversion, the widget and the layout
+- ✅ 345 tests covering conversion, the widget and the layout
 
 ## Install
 

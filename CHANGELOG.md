@@ -52,6 +52,22 @@ as it did.
   groups driving a strip and a sheet from one list, one built from
   `NepaliDate`s and one from `DateTime`s.
 
+### Fixed
+
+* **The BS/AD switch no longer slides the calendar to a month you did not
+  ask for.** Switching system rebuilds the pager and its `PageController`,
+  and a Flutter scroll position absorbs the one it replaces — pixels *and*
+  any running activity. So a month animation or fling that was still in
+  flight when the toggle was tapped carried on afterwards, and a second
+  later the calendar drifted a month on by itself. The pending scroll is now
+  stopped before the swap, and the new page is anchored on the month
+  actually on screen at that instant rather than on the controller's focused
+  date, which lags a page behind while one is travelling. Round trips are
+  anchored on the focused *day* where it belongs to that month, so BS → AD →
+  BS returns to the month it started on instead of landing a month earlier —
+  a BS month and the AD month it opens in do not share a first day. Present
+  since the switch was introduced; six tests now cover it.
+
 ### Migration
 
 A plain allow-list becomes a single group with no colour:

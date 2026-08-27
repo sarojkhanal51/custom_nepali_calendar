@@ -170,15 +170,50 @@ class _CalendarViewState extends State<CalendarView> {
           // Page indices mean different months in each system, so the pager
           // and its controller are rebuilt around the month currently in
           // view.
-          _pager = _buildPager();
           final PageController old = _pageController;
           old.removeListener(_onScroll);
-          _pageController = PageController(
-            initialPage: _pager.pageOf(controller.focusedDate),
-          );
+
+          // The month on screen right now. Rounding matches what the header
+          // is showing at this instant, so the switch keeps whatever the user
+          // can see even mid-animation.
+          final int visiblePage = old.hasClients
+              ? (old.page?.round() ?? _currentPage.value)
+              : _currentPage.value;
+
+          // Anchor on the focused day while it belongs to that month, and only
+          // fall back to the month's first day when it does not — which
+          // happens exactly when a page is still travelling and the controller
+          // has not caught up. Keeping the day matters on the way back: a BS
+          // month and the AD month it opens in do not share a first day, so
+          // anchoring on "the 1st" would land BS→AD→BS a month earlier than it
+          // started.
+          final NepaliDate anchor =
+              _pager.pageOf(controller.focusedDate) == visiblePage
+              ? controller.focusedDate
+              : _pager.monthStartOf(visiblePage);
+
+          // Stop that in-flight animation before the swap. A new position
+          // absorbs the old one — pixels *and* the running activity — so an
+          // unfinished scroll would carry on afterwards and slide the
+          // calendar to a different month on its own, seconds after the tap.
+          if (old.hasClients) {
+            old.position.hold(() {});
+          }
+
+          _pager = _buildPager();
+          final int target = _pager.pageOf(anchor);
+          _pageController = PageController(initialPage: target);
           _pageController.addListener(_onScroll);
-          _currentPage.value = _pager.pageOf(controller.focusedDate);
-          WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
+          _currentPage.value = target;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            old.dispose();
+            // Nothing reports the landing month back to the controller — the
+            // page did not "change", it was built there — so tell it, or the
+            // next selection would animate away to the stale month.
+            if (mounted) {
+              widget.controller.showMonthOf(anchor);
+            }
+          });
         }
       });
     }
